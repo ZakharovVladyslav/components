@@ -1,0 +1,80 @@
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-Thin.ttf') format('truetype');
+   font-weight: 100;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-ExtraLight.ttf') format('truetype');
+   font-weight: 200;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-Light.ttf') format('truetype');
+   font-weight: 300;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-Regular.ttf') format('truetype');
+   font-weight: 400;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-Medium.ttf') format('truetype');
+   font-weight: 500;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-SemiBold.ttf') format('truetype');
+   font-weight: 600;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-Bold.ttf') format('truetype');
+   font-weight: 700;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'Sora';
+   src: url('/fonts/Sora/static/Sora-ExtraBold.ttf') format('truetype');
+   font-weight: 800;
+   font-style: normal;
+}
+
+/* LULO CLEAN ONE */
+
+@font-face {
+   font-family: 'lulo-clean-one';
+   src: url('/fonts/lulo-clean-one/lulo-clean-one.ttf') format('truetype');
+   font-weight: normal;
+   font-style: normal;
+}
+
+@font-face {
+   font-family: 'lulo-clean-one-bold';
+   src: url('/fonts/lulo-clean-one/lulo-clean-one-bold.otf') format('opentype');
+   font-weight: 700;
+   font-style: normal;
+}
+
+/* LALEZAR */
+
+@font-face {
+   font-family: 'lalezar';
+   src: url('/fonts/Lalezar/Lalezar-Regular.ttf') format('truetype');
+   font-weight: normal;
+   font-style: normal;
+}

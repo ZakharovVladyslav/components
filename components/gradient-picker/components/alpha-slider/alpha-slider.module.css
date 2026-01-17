@@ -1,0 +1,20 @@
+@reference '#styles';
+
+.wrapper {
+   @apply relative h-5 w-full rounded-full;
+   @apply flex items-center justify-center;
+}
+
+.thumb {
+   @apply absolute top-1/2 -translate-x-1/2 -translate-y-1/2 transform;
+   @apply box-border size-6 rounded-full border-4 border-white;
+   @apply cursor-pointer shadow;
+}
+
+.thumb .inner {
+   @apply size-full cursor-pointer rounded-full;
+}
+
+.canvas {
+   border-radius: inherit;
+}

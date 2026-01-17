@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+@theme {
+   --color-primary: #1a2f5a;
+   --color-primary-dark: #0b2968;
+   --color-secondary: #459cda;
+   --color-tertiary: #5260ff;
+   --color-background-white: #fffcf9;
+   --color-total-white: #ffffff;
+   --color-total-black: #000000;
+   --color-light-grey: #cdcdd2;
+   --color-grey: #999fab;
+   --color-selection-blue: #0e8acb33;
+   --color-green: #8fcb0e;
+   --color-yellow: #fed02e;
+   --color-light-yellow: #ffe58a;
+   --color-orange: #f6880b;
+   --color-select-orange: #ff692e;
+   --color-select-purple: #785aff;
+   --color-error-red: #d52d30;
+   --color-dark-red: #820406;
+   --color-additional-blue: #4929da;
+   --color-additional-light-blue: #97b9ff;
+   --color-ab-red: #b70000;
+   --color-ab-grey: #777777;
+   --color-ab-black: #141414;
+   --color-bg-gradient-from: #0b0b0b;
+   --color-bg-gradient-to: #1f1e1e;
+
+   --text-3xs: 0.5rem; /* 8px */
+   --text-xxs: 0.625rem /* 10px */;
+
+   --font-lulo-clean-one: 'lulo-clean-one', sans-serif;
+   --font-lulo-clean-one-bold: 'lulo-clean-one-bold', sans-serif;
+
+   --breakpoint-s: 425px;
+   --breakpoint-sl: 540px;
+
+   --spacing-0.75: 0.1875rem; /* 3px */
+   --spacing-4.5: 1.125rem; /* 18px */
+   --spacing-6.5: 1.625rem; /* 26px */
+   --spacing-7.5: 1.875rem; /* 30px */
+   --spacing-8.5: 2.125rem; /* 34px */
+   --spacing-10.5: 2.625rem; /* 42px */
+   --spacing-13: 3.25rem; /* 52px */
+   --spacing-15: 3.75rem; /* 60px */
+   --spacing-17: 4.25rem; /* 68px */
+   --spacing-18: 4.5rem; /* 72px */
+   --spacing-21: 5.25rem; /* 84px */
+   --spacing-22.5: 5.625rem; /* 90px */
+   --spacing-25: 6.25rem; /* 100px */
+   --spacing-30: 7.5rem; /* 120px */
+   --spacing-33.25: 8.3125rem; /* 133px */
+   --spacing-41: 10.25rem; /* 164px */
+   --spacing-47.5: 11.875rem; /* 190px */
+   --spacing-50: 12.5rem; /* 200px */
+   --spacing-55.5: 13.875rem; /* 222px */
+   --spacing-69: 17.25rem; /* 276px */
+   --spacing-70: 17.5rem; /* 280px */
+   --spacing-75: 18.75rem; /* 300px */
+   --spacing-76: 19rem; /* 304px */
+   --spacing-77: 19.25rem; /* 308px */
+   --spacing-77.25: 19.3125rem; /* 309px */
+   --spacing-77.5: 19.375rem; /* 310px */
+   --spacing-85: 21.25rem; /* 340px */
+   --spacing-88: 22rem; /* 352px */
+   --spacing-91: 22.75rem; /* 364px */
+   --spacing-95: 23.75rem; /* 380px */
+   --spacing-98: 24.5rem; /* 392px */
+   --spacing-109.5: 27.375rem; /* 438px */
+   --spacing-125: 31.25rem; /* 500px */
+   --spacing-136: 34rem; /* 544px */
+   --spacing-148: 37rem; /* 592px */
+   --spacing-160: 40rem; /* 640px */
+
+   --outline-3: 0.1875rem; /* 3px */
+
+   --outline-offset-6: 0.375rem; /* 6px */
+
+   --radius-px: 0.0625rem; /* 1px */
+   --radius-sl: 0.625rem; /* 10px */
+   --radius-sml: 0.4375rem; /* 7px */
+   --radius-5xl: 3.125rem; /* 50px */
+
+   --font-sora: 'Sora', sans-serif;
+   --font-lalezar: 'lalezar', sans-serif;
+
+   --shadow-default: 0 0 20px 0 rgba(18, 0, 37, 0.1);
+   --shadow-default-s: 0 0 15px 0 rgba(18, 0, 37, 0.1);
+
+   --drop-shadow-select: 0 0 5px rgba(120, 90, 255, 1);
+}
+
+/*--------------------UTILITIES--------------------*/
+
+@utility button {
+   @apply cursor-pointer border-none bg-transparent outline-none;
+   @apply transition-colors duration-200 ease-in-out;
+   @apply focus-within:outline-none focus:outline-none;
+   @apply px-0 py-0;
+}
+
+@utility input {
+   @apply border-none bg-transparent outline-none;
+   @apply transition-colors duration-200 ease-in-out;
+   @apply focus-within:outline-none focus:outline-none;
+}
+
+@utility title-small {
+   @apply font-sora text-sm font-semibold;
+}
+
+@utility title-regular {
+   @apply font-sora text-base font-semibold;
+}
+
+@utility title-medium {
+   @apply font-sora text-xl font-semibold;
+}
+
+@utility title-semibig {
+   @apply font-sora text-2xl font-semibold;
+}
+
+@utility title-big {
+   @apply font-sora text-3xl;
+}
+
+@utility text-tiny {
+   @apply font-sora text-xs font-normal;
+}
+
+@utility text-small {
+   @apply font-sora text-sm font-normal;
+}
+
+@utility text-small/semibold {
+   @apply font-sora text-sm font-semibold;
+}
+
+@utility text-medium {
+   @apply font-sora text-base font-normal;
+}
+
+@utility text-medium/semibold {
+   @apply font-sora text-base font-semibold;
+}
+
+@utility text-tiny/semibold {
+   @apply font-sora text-xs font-semibold;
+}
+
+@utility text-semibig {
+   @apply font-sora text-xl font-normal;
+}
+
+@utility text-semibig/semibold {
+   @apply font-sora text-xl font-semibold;
+}
+
+@utility button-tiny/semibold {
+   @apply font-sora text-xs font-semibold;
+}
+
+@utility button-small/semibold {
+   @apply font-sora text-sm font-semibold;
+}
+
+@utility button-big/semibold {
+   @apply font-sora text-base font-semibold;
+}

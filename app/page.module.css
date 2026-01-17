@@ -1,0 +1,22 @@
+@reference '#styles';
+
+.main {
+   @apply bg-ab-black w-full flex-1;
+   @apply flex items-center justify-center;
+}
+
+.gradient-picker-wrapper {
+   @apply gap-0;
+}
+
+.gradient-slider-wrapper {
+   @apply rounded-t-lg! rounded-none mt-5;
+}
+
+.hue-slider-wrapper {
+   @apply rounded-none;
+}
+
+.alpha-slider-wrapper {
+   @apply rounded-b-lg! rounded-none;
+}

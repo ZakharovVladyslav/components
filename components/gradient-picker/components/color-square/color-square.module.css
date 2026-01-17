@@ -1,0 +1,13 @@
+@reference '#styles';
+
+.color-square {
+   @apply relative overflow-hidden rounded-xl;
+   @apply aspect-square h-auto w-full;
+}
+
+.pointer {
+   @apply absolute -translate-x-1/2 -translate-y-1/2 transform;
+   @apply pointer-events-none min-h-3.5 min-w-3.5 rounded-full;
+   @apply border-2 border-solid border-white;
+   @apply cursor-pointer shadow;
+}
