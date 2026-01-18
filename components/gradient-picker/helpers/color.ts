@@ -1,25 +1,25 @@
 export const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
 export const hsvToRgb = (h: number, s: number, v: number) => {
-   const hh = ((h % 360) + 360) % 360;
-   const c = v * s;
-   const x = c * (1 - Math.abs(((hh / 60) % 2) - 1));
-   const m = v - c;
+   const normalizedHue = ((h % 360) + 360) % 360;
+   const chroma = v * s;
+   const x = chroma * (1 - Math.abs(((normalizedHue / 60) % 2) - 1));
+   const m = v - chroma;
 
-   let rp = 0,
-      gp = 0,
-      bp = 0;
+   let redPrime = 0;
+   let greenPrime = 0;
+   let bluePrime = 0;
 
-   if (hh < 60) [rp, gp, bp] = [c, x, 0];
-   else if (hh < 120) [rp, gp, bp] = [x, c, 0];
-   else if (hh < 180) [rp, gp, bp] = [0, c, x];
-   else if (hh < 240) [rp, gp, bp] = [0, x, c];
-   else if (hh < 300) [rp, gp, bp] = [x, 0, c];
-   else [rp, gp, bp] = [c, 0, x];
+   if (normalizedHue < 60) [redPrime, greenPrime, bluePrime] = [chroma, x, 0];
+   else if (normalizedHue < 120) [redPrime, greenPrime, bluePrime] = [x, chroma, 0];
+   else if (normalizedHue < 180) [redPrime, greenPrime, bluePrime] = [0, chroma, x];
+   else if (normalizedHue < 240) [redPrime, greenPrime, bluePrime] = [0, x, chroma];
+   else if (normalizedHue < 300) [redPrime, greenPrime, bluePrime] = [x, 0, chroma];
+   else [redPrime, greenPrime, bluePrime] = [chroma, 0, x];
 
-   const r = Math.round((rp + m) * 255);
-   const g = Math.round((gp + m) * 255);
-   const b = Math.round((bp + m) * 255);
+   const r = Math.round((redPrime + m) * 255);
+   const g = Math.round((greenPrime + m) * 255);
+   const b = Math.round((bluePrime + m) * 255);
 
    return { r, g, b };
 };
@@ -31,35 +31,31 @@ export const rgbToHsv = (r: number, g: number, b: number) => {
 
    const max = Math.max(rp, gp, bp);
    const min = Math.min(rp, gp, bp);
-   const d = max - min;
+   const delta = max - min;
 
    let h = 0;
-   if (d !== 0) {
-      if (max === rp) h = 60 * (((gp - bp) / d) % 6);
-      else if (max === gp) h = 60 * ((bp - rp) / d + 2);
-      else h = 60 * ((rp - gp) / d + 4);
+   if (delta !== 0) {
+      if (max === rp) h = 60 * (((gp - bp) / delta) % 6);
+      else if (max === gp) h = 60 * ((bp - rp) / delta + 2);
+      else h = 60 * ((rp - gp) / delta + 4);
    }
+
    if (h < 0) h += 360;
 
-   const s = max === 0 ? 0 : d / max;
+   const s = max === 0 ? 0 : delta / max;
    const v = max;
 
    return { h, s, v };
 };
 
 export const normalizeHex = (hex: string) => {
-   const h = hex.trim().replace(/^#/, '');
-   if (h.length === 3) return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`.toLowerCase();
-   if (h.length === 6) return `#${h}`.toLowerCase();
+   const normalized = hex.trim().replace(/^#/, '');
+   if (normalized.length === 3) {
+      // eslint-disable-next-line max-len
+      return `#${normalized[0]}${normalized[0]}${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}`.toLowerCase();
+   }
+   if (normalized.length === 6) return `#${normalized}`.toLowerCase();
    return '#000000';
-};
-
-export const hexToRgb = (hex: string) => {
-   const h = normalizeHex(hex).slice(1);
-   const r = parseInt(h.slice(0, 2), 16);
-   const g = parseInt(h.slice(2, 4), 16);
-   const b = parseInt(h.slice(4, 6), 16);
-   return { r, g, b };
 };
 
 export const rgbToHex = (r: number, g: number, b: number) => {
@@ -73,31 +69,117 @@ export const normalizeHue = (h: unknown) => {
    return ((v % 360) + 360) % 360;
 };
 
-export const hexWithHue = (hex: string, nextHue: number) => {
-   const { r, g, b } = hexToRgb(hex);
-   const { s, v } = rgbToHsv(r, g, b);
-   const rgb = hsvToRgb(nextHue, s, v);
-   return rgbToHex(rgb.r, rgb.g, rgb.b);
+export const clampByte = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
+
+export const rgbToRgbaString = (r: number, g: number, b: number, a: number) => {
+   const alpha = clamp01(a);
+   return `rgba(${clampByte(r)}, ${clampByte(g)}, ${clampByte(b)}, ${alpha})`;
 };
 
-export const hexToHue = (hex: string) => {
-   const { r, g, b } = hexToRgb(hex);
-   const { h } = rgbToHsv(r, g, b);
-   return h;
+export const parseRgbaString = (value: string) => {
+   const match = value
+      .trim()
+      .match(/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9]*\.?[0-9]+)\s*\)$/i);
+
+   if (!match) return null;
+
+   return {
+      r: clampByte(Number(match[1])),
+      g: clampByte(Number(match[2])),
+      b: clampByte(Number(match[3])),
+      a: clamp01(Number(match[4])),
+   };
 };
 
-const THUMB_SIZE = 24; // tailwind size-6 => 24px
-const R = THUMB_SIZE / 2;
+export const rgbaToHue = (rgba: string) => {
+   const parsed = parseRgbaString(rgba);
+   if (!parsed) return 0;
+   const hsv = rgbToHsv(parsed.r, parsed.g, parsed.b);
+   return hsv.h;
+};
+
+export const rgbaWithHue = (rgba: string, nextHue: number) => {
+   const parsed = parseRgbaString(rgba);
+   const base = parsed ?? { r: 0, g: 0, b: 0, a: 1 };
+
+   const hsv = rgbToHsv(base.r, base.g, base.b);
+   const rgb = hsvToRgb(nextHue, hsv.s, hsv.v);
+
+   return rgbToRgbaString(rgb.r, rgb.g, rgb.b, base.a);
+};
+
+export const rgbToHue = (r: number, g: number, b: number): number => {
+   const rf = r / 255;
+   const gf = g / 255;
+   const bf = b / 255;
+
+   const max = Math.max(rf, gf, bf);
+   const min = Math.min(rf, gf, bf);
+   const d = max - min;
+
+   if (d === 0) return 0;
+
+   let h: number;
+   if (max === rf) {
+      h = (gf - bf) / d + (gf < bf ? 6 : 0);
+   } else if (max === gf) {
+      h = (bf - rf) / d + 2;
+   } else {
+      h = (rf - gf) / d + 4;
+   }
+
+   return (h * 60) % 360;
+};
+
+export const rgbaWithAlpha = (rgba: string, nextAlpha: number) => {
+   const parsed = parseRgbaString(rgba);
+   const base = parsed ?? { r: 0, g: 0, b: 0, a: 1 };
+   return rgbToRgbaString(base.r, base.g, base.b, clamp01(nextAlpha));
+};
+
+export const alphaFromRgba = (rgba: string) => {
+   const parsed = parseRgbaString(rgba);
+   return parsed ? clamp01(parsed.a) : 1;
+};
+
+const THUMB_SIZE = 24;
+const THUMB_RADIUS = THUMB_SIZE / 2;
 
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 
 export const valueFromClientX = (clientX: number, rect: DOMRect) => {
-   const cx = clamp(clientX - rect.left, R, rect.width - R);
-   const t = (cx - R) / Math.max(1, rect.width - 2 * R);
+   const cx = clamp(clientX - rect.left, THUMB_RADIUS, rect.width - THUMB_RADIUS);
+   const t = (cx - THUMB_RADIUS) / Math.max(1, rect.width - 2 * THUMB_RADIUS);
 
    return clamp(t, 0, 1);
 };
 
 export const thumbLeftFromValue = (value01: number, width: number) => {
-   return R + clamp(value01, 0, 1) * Math.max(1, width - 2 * R);
+   return THUMB_RADIUS + clamp(value01, 0, 1) * Math.max(1, width - 2 * THUMB_RADIUS);
+};
+
+export type Rgb = { r: number; g: number; b: number };
+
+export const hexToRgb = (hex: string): Rgb | null => {
+   if (!hex) return null;
+
+   let h = hex.trim();
+   if (h.startsWith('#')) h = h.slice(1);
+
+   if (h.length === 3 || h.length === 4) {
+      h = h
+         .split('')
+         .map(ch => ch + ch)
+         .join('');
+   }
+
+   if (h.length === 8) h = h.slice(0, 6);
+
+   if (h.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(h)) return null;
+
+   const r = parseInt(h.slice(0, 2), 16);
+   const g = parseInt(h.slice(2, 4), 16);
+   const b = parseInt(h.slice(4, 6), 16);
+
+   return { r, g, b };
 };

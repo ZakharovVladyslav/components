@@ -3,21 +3,16 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import s from './alpha-slider.module.css';
-import { clampByte } from './helpers';
 import { ColorContext, GradientContext } from '../../context';
 import {
+   alphaFromRgba,
    clamp01,
-   hexToRgb,
+   parseRgbaString,
    thumbLeftFromValue,
    valueFromClientX,
 } from '../../helpers/color';
 import { cn } from '../../helpers/string';
 
-/**
- * Class names for customizing the Alpha Slider component.
- * @property {string} wrapper - Class name for the slider wrapper.
- * @property {string} track - Class name for the slider track.
- */
 export type AlphaSliderClassNames = {
    wrapper: string;
    track: string;
@@ -31,7 +26,7 @@ type TProps = {
 
 export const AlphaSlider = ({ classNames }: TProps) => {
    const { activeStopId: activeStop, stops } = useContext(GradientContext);
-   const { hex, alpha, onAlphaChange } = useContext(ColorContext);
+   const { rgba, onRgbaChange } = useContext(ColorContext);
 
    const canvasRef = useRef<HTMLCanvasElement>(null);
    const wrapperRef = useRef<HTMLDivElement>(null);
@@ -39,20 +34,22 @@ export const AlphaSlider = ({ classNames }: TProps) => {
    const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
 
    useEffect(() => {
-      const el = wrapperRef.current;
-      if (!el) return;
+      const element = wrapperRef.current;
+      if (!element) return;
 
-      const ro = new ResizeObserver(entries => {
-         const cr = entries[0]?.contentRect;
-         if (!cr) return;
-         const w = Math.floor(cr.width);
-         const h = Math.floor(cr.height);
+      const resizeObserver = new ResizeObserver(entries => {
+         const contentRect = entries[0]?.contentRect;
+         if (!contentRect) return;
+
+         const w = Math.floor(contentRect.width);
+         const h = Math.floor(contentRect.height);
          if (w <= 0 || h <= 0) return;
+
          setDimensions(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
       });
 
-      ro.observe(el);
-      return () => ro.disconnect();
+      resizeObserver.observe(element);
+      return () => resizeObserver.disconnect();
    }, []);
 
    useEffect(() => {
@@ -62,63 +59,68 @@ export const AlphaSlider = ({ classNames }: TProps) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(w * devicePixelRatio);
+      canvas.height = Math.round(h * devicePixelRatio);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const context = canvas.getContext('2d');
+      if (!context) return;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
+      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      context.clearRect(0, 0, w, h);
 
       const cell = 6;
       for (let y = 0; y < h; y += cell) {
          for (let x = 0; x < w; x += cell) {
             const odd = ((Math.floor(x / cell) + Math.floor(y / cell)) & 1) === 1;
-            ctx.fillStyle = odd ? '#bdbdbd' : '#ffffff';
-            ctx.fillRect(x, y, cell, cell);
+            context.fillStyle = odd ? '#bdbdbd' : '#ffffff';
+            context.fillRect(x, y, cell, cell);
          }
       }
 
-      const { r, g, b } = hex ? hexToRgb(hex) : { r: 0, g: 0, b: 0 };
-      const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, `rgba(${clampByte(r)},${clampByte(g)},${clampByte(b)},0)`);
-      grad.addColorStop(1, `rgba(${clampByte(r)},${clampByte(g)},${clampByte(b)},1)`);
+      const parsed = parseRgbaString(rgba) ?? { r: 0, g: 0, b: 0, a: 1 };
 
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-   }, [dimensions.w, dimensions.h, hex]);
+      const gradient = context.createLinearGradient(0, 0, w, 0);
+      gradient.addColorStop(0, `rgba(${parsed.r}, ${parsed.g}, ${parsed.b}, 0)`);
+      gradient.addColorStop(1, `rgba(${parsed.r}, ${parsed.g}, ${parsed.b}, 1)`);
 
-   const safeAlpha = clamp01(Number.isFinite(alpha) ? alpha : 1);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, w, h);
+   }, [dimensions.w, dimensions.h, rgba]);
+
+   const safeAlpha = clamp01(alphaFromRgba(rgba));
 
    const thumbLeft = useMemo(() => {
       return thumbLeftFromValue(safeAlpha, dimensions.w);
    }, [safeAlpha, dimensions.w]);
 
    const thumbStyle = useMemo(() => ({ left: thumbLeft }), [thumbLeft]);
-   const thumbInnerStyle = useMemo(
-      () => ({ backgroundColor: hex, opacity: safeAlpha }),
-      [hex, safeAlpha],
-   );
+   const thumbInnerStyle = useMemo(() => ({ backgroundColor: rgba }), [rgba]);
 
    const rafRef = useRef<number | null>(null);
    const pendingAlphaRef = useRef<number | null>(null);
 
    const commitAlpha = (nextAlpha: number) => {
-      const a = clamp01(nextAlpha);
-      onAlphaChange(a);
-
+      const alpha = clamp01(nextAlpha);
       const id = activeStop.value;
       if (!id) return;
+
+      const currentStop = stops.value[id];
+      const nextColor = currentStop ? currentStop.color : rgba;
+
+      const parsed = parseRgbaString(nextColor) ??
+         parseRgbaString(rgba) ?? { r: 0, g: 0, b: 0, a: 1 };
+      const nextRgba = `rgba(${parsed.r}, ${parsed.g}, ${parsed.b}, ${alpha})`;
+
+      onRgbaChange(nextRgba);
 
       stops.onChange({
          ...stops.value,
          [id]: {
             ...stops.value[id],
-            alpha: a,
+            color: nextRgba,
          },
       });
    };
@@ -129,10 +131,10 @@ export const AlphaSlider = ({ classNames }: TProps) => {
 
       rafRef.current = requestAnimationFrame(() => {
          rafRef.current = null;
-         const a = pendingAlphaRef.current;
+         const alpha = pendingAlphaRef.current;
          pendingAlphaRef.current = null;
-         if (a == null) return;
-         commitAlpha(a);
+         if (alpha == null) return;
+         commitAlpha(alpha);
       });
    };
 

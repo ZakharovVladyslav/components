@@ -3,3 +3,5 @@ export * from './gradient-slider';
 export * from './hue-slider';
 export * from './alpha-slider';
 export * from './delete-stop';
+export * from './gradient-formats';
+export * from './eye-dropper';

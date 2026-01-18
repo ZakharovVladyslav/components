@@ -1,72 +1,61 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { Fragment, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
    AlphaSlider,
-   AlphaSliderClassNames,
    ColorSquare,
-   ColorSquareClassNames,
    DeleteStop,
-   DeleteStopClassNames,
+   EyeDropper,
+   GradientFormats,
    GradientSlider,
-   GradientSliderClassNames,
    HueSlider,
-   HueSliderClassNames,
+   PickGradientFormats,
 } from './components';
 import { HUE_MAX } from './components/hue-slider/const';
 import { INITIAL_STOPS } from './const';
-import { ColorContext, GradientContext } from './context';
+import { ColorContext, GradientContext, GradientPrefixes } from './context';
 import s from './gradient-picker.module.css';
-import { parseLinearGradientToStops } from './helpers';
-import { hexToHue } from './helpers/color';
+import { parseGradientToStops } from './helpers';
+import { rgbaToHue } from './helpers/color';
 import { cn } from './helpers/string';
-import { Stops } from './types';
-
-type ChildrenProps = {
-   colorSquare?: {
-      classNames?: Partial<ColorSquareClassNames>;
-   };
-   deleteStop?: {
-      classNames?: Partial<DeleteStopClassNames>;
-      icon?: ReactNode;
-   };
-   gradientSlider?: {
-      classNames?: Partial<GradientSliderClassNames>;
-      updateDelay?: number;
-   };
-   hueSlider?: {
-      classNames?: Partial<HueSliderClassNames>;
-   };
-   alphaSlider?: {
-      classNames?: Partial<AlphaSliderClassNames>;
-   };
-};
+import { ChildrenProps, Grid, GridItem, Nodes, Stops } from './types';
 
 type TProps = {
    gradient: string;
    childrenProps?: ChildrenProps;
+   grid?: Grid;
    wrapperClassName?: string;
    updateDelay?: number;
    onChange: (gradient: string) => void;
+};
+
+const DEFAULT_PREFIXES: GradientPrefixes = {
+   'linear-gradient': '',
+   'radial-gradient': 'circle at center',
+   'conic-gradient': 'from 90deg at 50% 50%',
 };
 
 export const GradientPicker = ({
    gradient,
    updateDelay,
    childrenProps,
+   grid,
    wrapperClassName,
    onChange,
 }: TProps) => {
    const [stops, setStops] = useState<Stops>(INITIAL_STOPS);
    const [stopsOrder, setStopsOrder] = useState<string[]>(Object.keys(INITIAL_STOPS));
    const [activeStopId, setActiveStopId] = useState<string | null>('stop1');
+   const [format, setFormat] = useState<GradientFormats>('linear-gradient');
+   const [prefixes, setPrefixes] = useState<GradientPrefixes>(DEFAULT_PREFIXES);
 
    const activeStop = activeStopId ? stops[activeStopId] : null;
 
-   const [hex, setHex] = useState<string>(activeStop?.color ?? '#000000');
-   const [hue, setHue] = useState<number>(hexToHue(activeStop?.color ?? '#000000'));
-   const [opacity, setOpacity] = useState<number>(activeStop?.alpha ?? 1);
+   const [rgba, setRgba] = useState<string>(activeStop?.color ?? 'rgba(0, 0, 0, 1)');
+   const [hue, setHue] = useState<number>(
+      rgbaToHue(activeStop?.color ?? 'rgba(0, 0, 0, 1)'),
+   );
 
    const didInitRef = useRef<boolean>(false);
 
@@ -74,41 +63,95 @@ export const GradientPicker = ({
       if (didInitRef.current) return;
       didInitRef.current = true;
 
-      const parsed = parseLinearGradientToStops(gradient);
+      const parsed = parseGradientToStops(gradient);
       if (!parsed) return;
 
-      setStops(parsed);
-      setStopsOrder(Object.keys(parsed));
+      setFormat(parsed.format);
 
-      const firstStopId = Object.keys(parsed)[0] ?? null;
+      setPrefixes(prev => ({
+         ...prev,
+         [parsed.format]:
+            parsed.prefix || prev[parsed.format] || DEFAULT_PREFIXES[parsed.format],
+      }));
 
+      setStops(parsed.stops);
+      setStopsOrder(Object.keys(parsed.stops));
+
+      const firstStopId = Object.keys(parsed.stops)[0] ?? null;
       setActiveStopId(firstStopId);
 
       if (firstStopId) {
-         const firstParsedStop = parsed[firstStopId];
-         setHex(firstParsedStop.color ?? '#000000');
-         setHue(hexToHue(firstParsedStop.color ?? '#000000'));
-         setOpacity(firstParsedStop.alpha ?? 1);
+         const firstParsedStop = parsed.stops[firstStopId];
+         const nextRgba = firstParsedStop.color ?? 'rgba(0, 0, 0, 1)';
+         setRgba(nextRgba);
+         setHue(rgbaToHue(nextRgba));
       }
    }, [gradient]);
 
    useEffect(() => {
       if (!activeStop) return;
 
-      const nextHex = activeStop.color ?? '#000000';
-      const nextOpacity = activeStop.alpha ?? 1;
-
-      setHex(nextHex);
-      setOpacity(nextOpacity);
+      const nextRgba = activeStop.color ?? 'rgba(0, 0, 0, 1)';
+      setRgba(nextRgba);
 
       setHue(prevHue => {
-         const computed = hexToHue(nextHex);
+         const computed = rgbaToHue(nextRgba);
          if (computed === 0 && prevHue > 300) return HUE_MAX;
          return computed;
       });
    }, [activeStop]);
 
-   const containerRef = useRef<HTMLDivElement>(null);
+   const MAP_ITEMS: Record<Nodes, ReactNode> = useMemo(
+      () => ({
+         'alpha-slider': (
+            <AlphaSlider classNames={childrenProps?.alphaSlider?.classNames} />
+         ),
+         'color-square': (
+            <ColorSquare classNames={childrenProps?.colorSquare?.classNames} />
+         ),
+         'gradient-slider': (
+            <GradientSlider
+               input={gradient}
+               updateDelay={childrenProps?.gradientSlider?.updateDelay ?? updateDelay}
+               classNames={childrenProps?.gradientSlider?.classNames}
+               onChange={onChange}
+            />
+         ),
+         'hue-slider': <HueSlider classNames={childrenProps?.hueSlider?.classNames} />,
+         'stop-delete': (
+            <DeleteStop
+               icon={childrenProps?.deleteStop?.icon}
+               classNames={childrenProps?.deleteStop?.classNames}
+            />
+         ),
+         'gradient-formats': (
+            <PickGradientFormats
+               classNames={childrenProps?.gradientFormats?.classNames}
+               allowedFormats={childrenProps?.gradientFormats?.allowedFormats}
+               icons={childrenProps?.gradientFormats?.icons}
+            />
+         ),
+         'eye-dropper': (
+            <EyeDropper
+               icon={childrenProps?.eyeDropper?.icon}
+               classNames={childrenProps?.eyeDropper?.classNames}
+            />
+         ),
+      }),
+      [childrenProps, gradient, onChange, updateDelay],
+   );
+
+   const renderGridItem = (item: Nodes | GridItem, key: React.Key): ReactNode => {
+      if (typeof item === 'string') {
+         return <Fragment key={key}>{MAP_ITEMS[item]}</Fragment>;
+      }
+
+      return (
+         <div key={key} className={cn(item.className, s['map-item'])}>
+            {item.children.map((child, idx) => renderGridItem(child, `${key}-${idx}`))}
+         </div>
+      );
+   };
 
    return (
       <GradientContext.Provider
@@ -116,32 +159,15 @@ export const GradientPicker = ({
             activeStopId: { value: activeStopId, onChange: setActiveStopId },
             stops: { value: stops, onChange: setStops },
             stopsOrder: { value: stopsOrder, onChange: setStopsOrder },
+            format: { value: format, onChange: setFormat },
+            prefixes: { value: prefixes, onChange: setPrefixes },
          }}
       >
          <ColorContext.Provider
-            value={{
-               hex,
-               hue,
-               alpha: opacity,
-               onHexChange: setHex,
-               onHueChange: setHue,
-               onAlphaChange: setOpacity,
-            }}
+            value={{ rgba, hue, onRgbaChange: setRgba, onHueChange: setHue }}
          >
-            <section className={cn(s.wrapper, wrapperClassName)} ref={containerRef}>
-               <ColorSquare classNames={childrenProps?.colorSquare?.classNames} />
-               <DeleteStop
-                  icon={childrenProps?.deleteStop?.icon}
-                  classNames={childrenProps?.deleteStop?.classNames}
-               />
-               <GradientSlider
-                  input={gradient}
-                  updateDelay={childrenProps?.gradientSlider?.updateDelay ?? updateDelay}
-                  classNames={childrenProps?.gradientSlider?.classNames}
-                  onChange={onChange}
-               />
-               <HueSlider classNames={childrenProps?.hueSlider?.classNames} />
-               <AlphaSlider classNames={childrenProps?.alphaSlider?.classNames} />
+            <section className={cn(s.wrapper, wrapperClassName)}>
+               {grid?.map((item, index) => renderGridItem(item, index))}
             </section>
          </ColorContext.Provider>
       </GradientContext.Provider>

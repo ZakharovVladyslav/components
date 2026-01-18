@@ -5,7 +5,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { HUE_MAX } from './const';
 import s from './hue-slider.module.css';
 import { ColorContext, GradientContext } from '../../context';
-import { hexWithHue, normalizeHue } from '../../helpers/color';
+import { normalizeHue, parseRgbaString, rgbaWithHue } from '../../helpers/color';
 import { clamp } from '../../helpers/number';
 import { cn } from '../../helpers/string';
 
@@ -20,18 +20,15 @@ type TProps = {
 };
 
 export const HueSlider = ({ classNames }: TProps) => {
-   const { activeStopId: activeStop, stops } = useContext(GradientContext);
-   const { hex, hue, onHexChange, onHueChange } = useContext(ColorContext);
+   const { activeStopId: activeStopIdConstituent, stops } = useContext(GradientContext);
+   const { rgba, hue, onRgbaChange, onHueChange } = useContext(ColorContext);
 
    const canvasRef = useRef<HTMLCanvasElement>(null);
    const wrapperRef = useRef<HTMLElement>(null);
    const thumbRef = useRef<HTMLDivElement>(null);
 
-   const [dimensions, setDimensions] = useState<Record<'w' | 'h', number>>({
-      w: 0,
-      h: 0,
-   });
-   const [thumbR, setThumbR] = useState<number>(12);
+   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+   const [thumbRadius, setThumbRadius] = useState<number>(12);
 
    useEffect(() => {
       const element = wrapperRef.current;
@@ -41,14 +38,16 @@ export const HueSlider = ({ classNames }: TProps) => {
          const contentRect = entries[0]?.contentRect;
          if (!contentRect) return;
 
-         const w = Math.floor(contentRect.width);
-         const h = Math.floor(contentRect.height);
-         if (w <= 0 || h <= 0) return;
+         const width = Math.floor(contentRect.width);
+         const height = Math.floor(contentRect.height);
+         if (width <= 0 || height <= 0) return;
 
-         setDimensions(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
+         setDimensions(prev =>
+            prev.w === width && prev.h === height ? prev : { w: width, h: height },
+         );
 
          const thumbRect = thumbRef.current?.getBoundingClientRect();
-         if (thumbRect?.width) setThumbR(Math.max(0, thumbRect.width / 2));
+         if (thumbRect?.width) setThumbRadius(Math.max(0, thumbRect.width / 2));
       });
 
       observer.observe(element);
@@ -89,38 +88,35 @@ export const HueSlider = ({ classNames }: TProps) => {
 
    const thumbLeft = useMemo(() => {
       const value01 = normalizeHue(hue) / 360;
-      const w = dimensions.w || 1;
-      return thumbR + clamp(value01, 0, 1) * Math.max(1, w - 2 * thumbR);
-   }, [hue, dimensions.w, thumbR]);
+      const width = dimensions.w || 1;
+      return thumbRadius + clamp(value01, 0, 1) * Math.max(1, width - 2 * thumbRadius);
+   }, [hue, dimensions.w, thumbRadius]);
 
    const thumbStyle = useMemo(
-      () => ({
-         left: thumbLeft,
-         backgroundColor: hex,
-      }),
-      [thumbLeft, hex],
+      () => ({ left: thumbLeft, backgroundColor: rgba }),
+      [thumbLeft, rgba],
    );
 
    const rafRef = useRef<number | null>(null);
    const pendingHueRef = useRef<number | null>(null);
 
    const commitHue = (nextHue: number) => {
-      const h = normalizeHue(nextHue);
-      const nextHex = hexWithHue(hex, h);
+      const normalized = normalizeHue(nextHue);
+      const nextRgba = rgbaWithHue(rgba, normalized);
 
-      onHueChange(h);
-      onHexChange(nextHex);
+      onHueChange(normalized);
+      onRgbaChange(nextRgba);
 
-      const id = activeStop.value;
+      const id = activeStopIdConstituent.value;
       if (!id) return;
 
-      stops.onChange({
-         ...stops.value,
+      stops.onChange(prev => ({
+         ...prev,
          [id]: {
-            ...stops.value[id],
-            color: nextHex,
+            ...prev[id],
+            color: nextRgba,
          },
-      });
+      }));
    };
 
    const scheduleHue = (nextHue: number) => {
@@ -129,10 +125,10 @@ export const HueSlider = ({ classNames }: TProps) => {
 
       rafRef.current = requestAnimationFrame(() => {
          rafRef.current = null;
-         const h = pendingHueRef.current;
+         const queued = pendingHueRef.current;
          pendingHueRef.current = null;
-         if (h == null) return;
-         commitHue(h);
+         if (queued == null) return;
+         commitHue(queued);
       });
    };
 
@@ -146,8 +142,13 @@ export const HueSlider = ({ classNames }: TProps) => {
       const rect = wrapperRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      const cx = clamp(clientX - rect.left, thumbR, rect.width - thumbR);
-      const t = (cx - thumbR) / Math.max(1, rect.width - 2 * thumbR);
+      const clampedClientX = clamp(
+         clientX - rect.left,
+         thumbRadius,
+         rect.width - thumbRadius,
+      );
+      const t =
+         (clampedClientX - thumbRadius) / Math.max(1, rect.width - 2 * thumbRadius);
 
       const nextHue = Math.min(t * 360, HUE_MAX);
       scheduleHue(nextHue);
@@ -162,6 +163,20 @@ export const HueSlider = ({ classNames }: TProps) => {
       if ((e.buttons & 1) !== 1) return;
       pick(e.clientX);
    };
+
+   useEffect(() => {
+      const parsed = parseRgbaString(rgba);
+      if (!parsed) return;
+
+      const computedHue = normalizeHue(hue);
+      if (computedHue === 0) return;
+
+      const id = activeStopIdConstituent.value;
+      if (!id) return;
+
+      const current = stops.value?.[id];
+      if (!current) return;
+   }, [rgba, hue, activeStopIdConstituent.value]);
 
    return (
       <section

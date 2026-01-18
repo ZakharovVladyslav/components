@@ -12,14 +12,15 @@ import React, {
 import s from './color-square.module.css';
 import { normalizeHue } from './helpers';
 import { ColorContext, GradientContext } from '../../context';
-import { clamp01, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from '../../helpers/color';
+import {
+   clamp01,
+   hsvToRgb,
+   parseRgbaString,
+   rgbToHsv,
+   rgbToRgbaString,
+} from '../../helpers/color';
 import { cn } from '../../helpers/string';
 
-/**
- * Class names for customizing the Color Square component.
- * @property {string} square - Class name for the color square wrapper.
- * @property {string} pointer - Class name for the color square pointer.
- */
 export type ColorSquareClassNames = {
    square: string;
    pointer: string;
@@ -27,12 +28,11 @@ export type ColorSquareClassNames = {
 
 type TProps = {
    classNames?: Partial<ColorSquareClassNames>;
-   onChange?: (hex: string) => void;
+   onChange?: (rgba: string) => void;
 };
 
 export const ColorSquare = ({ classNames, onChange }: TProps) => {
-   const { hex, hue, onHexChange } = useContext(ColorContext);
-
+   const { rgba, hue, onRgbaChange } = useContext(ColorContext);
    const { activeStopId, stops } = useContext(GradientContext);
 
    const [saturationValue, setSaturationValue] = useState<{
@@ -42,10 +42,8 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
       saturation: 1,
       value: 1,
    }));
-   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({
-      w: 0,
-      h: 0,
-   });
+
+   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
    const [redrawTick, setRedrawTick] = useState<number>(0);
 
    const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,11 +74,11 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
       if (!element) return;
 
       const observer = new ResizeObserver(entries => {
-         const cr = entries[0]?.contentRect;
-         if (!cr) return;
+         const contentRect = entries[0]?.contentRect;
+         if (!contentRect) return;
 
-         const w = Math.floor(cr.width);
-         const h = Math.floor(cr.height);
+         const w = Math.floor(contentRect.width);
+         const h = Math.floor(contentRect.height);
          if (w <= 0 || h <= 0) return;
 
          setDimensions(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
@@ -91,18 +89,19 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
    }, []);
 
    useEffect(() => {
-      const onResize = () => setRedrawTick(t => t + 1);
+      const onResize = () => setRedrawTick(tick => tick + 1);
       window.addEventListener('resize', onResize);
       return () => window.removeEventListener('resize', onResize);
    }, []);
 
    useEffect(() => {
-      if (!hex) return;
+      if (!rgba) return;
       if (draggingRef.current) return;
 
-      const { r, g, b } = hexToRgb(hex);
-      const hsv = rgbToHsv(r, g, b);
+      const parsed = parseRgbaString(rgba);
+      if (!parsed) return;
 
+      const hsv = rgbToHsv(parsed.r, parsed.g, parsed.b);
       const next = { saturation: clamp01(hsv.s), value: clamp01(hsv.v) };
 
       setSaturationValue(prev => {
@@ -111,7 +110,7 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
             Math.abs(prev.value - next.value) < 1e-4;
          return same ? prev : next;
       });
-   }, [hex]);
+   }, [rgba]);
 
    useEffect(() => {
       const { w, h } = dimensions;
@@ -120,31 +119,31 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(w * devicePixelRatio);
+      canvas.height = Math.round(h * devicePixelRatio);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const context = canvas.getContext('2d');
+      if (!context) return;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
+      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      context.clearRect(0, 0, w, h);
 
       const hueRgb = hsvToRgb(safeHue, 1, 1);
 
-      const gx = ctx.createLinearGradient(0, 0, w, 0);
-      gx.addColorStop(0, 'rgb(255,255,255)');
-      gx.addColorStop(1, `rgb(${hueRgb.r},${hueRgb.g},${hueRgb.b})`);
-      ctx.fillStyle = gx;
-      ctx.fillRect(0, 0, w, h);
+      const gradientX = context.createLinearGradient(0, 0, w, 0);
+      gradientX.addColorStop(0, 'rgb(255,255,255)');
+      gradientX.addColorStop(1, `rgb(${hueRgb.r},${hueRgb.g},${hueRgb.b})`);
+      context.fillStyle = gradientX;
+      context.fillRect(0, 0, w, h);
 
-      const gy = ctx.createLinearGradient(0, 0, 0, h);
-      gy.addColorStop(0, 'rgba(0,0,0,0)');
-      gy.addColorStop(1, 'rgba(0,0,0,1)');
-      ctx.fillStyle = gy;
-      ctx.fillRect(0, 0, w, h);
+      const gradientY = context.createLinearGradient(0, 0, 0, h);
+      gradientY.addColorStop(0, 'rgba(0,0,0,0)');
+      gradientY.addColorStop(1, 'rgba(0,0,0,1)');
+      context.fillStyle = gradientY;
+      context.fillRect(0, 0, w, h);
    }, [safeHue, dimensions.w, dimensions.h, redrawTick]);
 
    useEffect(() => {
@@ -153,34 +152,35 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
       };
    }, []);
 
-   const commit = (nextS: number, nextV: number) => {
-      const rgb = hsvToRgb(safeHue, nextS, nextV);
-      const nextHex = rgbToHex(rgb.r, rgb.g, rgb.b);
+   const commit = (nextSaturation: number, nextValue: number) => {
+      const parsed = parseRgbaString(rgba) ?? { r: 0, g: 0, b: 0, a: 1 };
+      const rgb = hsvToRgb(safeHue, nextSaturation, nextValue);
+      const nextRgba = rgbToRgbaString(rgb.r, rgb.g, rgb.b, parsed.a);
 
-      onHexChange?.(nextHex);
-      onChange?.(nextHex);
+      onRgbaChange?.(nextRgba);
+      onChange?.(nextRgba);
 
       const id: string | null | undefined = activeStopId?.value;
       if (!id) return;
 
       stops.onChange(prev => ({
          ...prev,
-         [id]: { ...prev[id], color: nextHex },
+         [id]: { ...prev[id], color: nextRgba },
       }));
    };
 
-   const scheduleCommit = (nextS: number, nextV: number) => {
-      pendingRef.current = { s: nextS, v: nextV };
+   const scheduleCommit = (nextSaturation: number, nextValue: number) => {
+      pendingRef.current = { s: nextSaturation, v: nextValue };
 
       if (rafRef.current != null) return;
       rafRef.current = requestAnimationFrame(() => {
          rafRef.current = null;
 
-         const p = pendingRef.current;
+         const pending = pendingRef.current;
          pendingRef.current = null;
-         if (!p) return;
+         if (!pending) return;
 
-         commit(p.s, p.v);
+         commit(pending.s, pending.v);
       });
    };
 
@@ -191,11 +191,11 @@ export const ColorSquare = ({ classNames, onChange }: TProps) => {
       const x = clamp01((clientX - rect.left) / rect.width);
       const y = clamp01((clientY - rect.top) / rect.height);
 
-      const nextS = x;
-      const nextV = 1 - y;
+      const nextSaturation = x;
+      const nextValue = 1 - y;
 
-      setSaturationValue({ saturation: nextS, value: nextV });
-      scheduleCommit(nextS, nextV);
+      setSaturationValue({ saturation: nextSaturation, value: nextValue });
+      scheduleCommit(nextSaturation, nextValue);
    };
 
    const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {

@@ -23,6 +23,8 @@ export type DeleteStopProps = {
 export const DeleteStop = ({ icon, classNames }: DeleteStopProps) => {
    const { activeStopId, stops, stopsOrder } = useContext(GradientContext);
 
+   const canStopBeDeleted = Object.keys(stops.value ?? {}).length > 2;
+
    const handleDeleteStop = () => {
       const activeId = activeStopId.value;
       if (!activeId) return;
@@ -55,6 +57,7 @@ export const DeleteStop = ({ icon, classNames }: DeleteStopProps) => {
    return (
       <button
          type="button"
+         disabled={!canStopBeDeleted}
          className={cn('delete-stop-button', classNames?.button, s.button)}
          onClick={handleDeleteStop}
       >

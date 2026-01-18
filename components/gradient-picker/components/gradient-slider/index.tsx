@@ -1,9 +1,8 @@
-import { useRef, useState, PointerEvent, useContext, useMemo, useEffect } from 'react';
+import { PointerEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import s from './gradient-slider.module.css';
 import {
    applyJump,
-   buildLinearGradient,
    clampN,
    getStopInnerStyle,
    leftPxFromPercent,
@@ -14,19 +13,12 @@ import {
    stopGap,
 } from './helpers';
 import { ColorContext, GradientContext } from '../../context';
-import { parseStopsFromLinearGradient, stopsArrayToRecord } from '../../helpers';
-import { hexToHue, hexToRgb } from '../../helpers/color';
+import { buildGradient, parseGradientToStops } from '../../helpers';
+import { rgbaToHue } from '../../helpers/color';
 import { debounce } from '../../helpers/function';
-import { clamp } from '../../helpers/number';
 import { cn } from '../../helpers/string';
 import { Stops } from '../../types';
 
-/**
- * Class names for customizing the Gradient Slider component.
- * @property {string} wrapper - Class name for the slider wrapper.
- * @property {string} stop - Class name for each gradient stop.
- * @property {string[]} stops - Array of class names for individual gradient stops (by index).
- */
 export type GradientSliderClassNames = {
    wrapper: string;
    stop: string;
@@ -46,27 +38,26 @@ export const GradientSlider = ({
    onChange,
    updateDelay = 0,
 }: TProps) => {
-   const { activeStopId, stops, stopsOrder } = useContext(GradientContext);
-   const { hex, alpha, onAlphaChange, onHexChange, onHueChange } =
-      useContext(ColorContext);
+   const { activeStopId, stops, stopsOrder, format, prefixes } =
+      useContext(GradientContext);
+   const { rgba, onRgbaChange, onHueChange } = useContext(ColorContext);
 
    const [draftPosition, setDraftPosition] = useState<Nullable<number>>(null);
    const [draggingStopId, setDraggingStopId] = useState<Nullable<string>>(null);
-   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({
-      w: 0,
-      h: 0,
-   });
+   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
    const sliderRef = useRef<HTMLDivElement>(null);
    const canvasRef = useRef<HTMLCanvasElement>(null);
 
    const skipFirstEmitRef = useRef(true);
-
    const lastRawPosRef = useRef<Nullable<number>>(null);
    const blockRef = useRef<Nullable<{ neighborId: string; dir: -1 | 1 }>>(null);
    const pointerOffsetPxRef = useRef(0);
 
-   const didInitFromInputRef = useRef(false);
+   const lastEmittedRef = useRef<string | null>(null);
+   const debounceKeyRef = useRef(
+      `gradient-picker:onChange:${Math.random().toString(36).slice(2)}`,
+   );
 
    const sortedStops = useMemo(() => {
       return Object.values(stops.value ?? {})
@@ -78,7 +69,9 @@ export const GradientSlider = ({
       if (!draggingStopId || draftPosition == null) return sortedStops;
 
       return sortedStops
-         .map(st => (st.id === draggingStopId ? { ...st, position: draftPosition } : st))
+         .map(stop =>
+            stop.id === draggingStopId ? { ...stop, position: draftPosition } : stop,
+         )
          .slice()
          .sort((a, b) => a.position - b.position);
    }, [sortedStops, draggingStopId, draftPosition]);
@@ -90,31 +83,34 @@ export const GradientSlider = ({
    }, [stops.value, stopsOrder]);
 
    useEffect(() => {
-      if (didInitFromInputRef.current) return;
       if (!input) return;
+      if (lastEmittedRef.current === input) return;
 
-      const parsed = parseStopsFromLinearGradient(input);
-      if (!parsed) {
-         didInitFromInputRef.current = true;
-         return;
+      const parsed = parseGradientToStops(input);
+      if (!parsed) return;
+
+      stops.onChange(parsed.stops);
+      stopsOrder?.onChange(orderIdsByPosition(parsed.stops));
+
+      const currentActive = activeStopId.value;
+      const nextActive =
+         (currentActive && parsed.stops[currentActive]
+            ? currentActive
+            : Object.keys(parsed.stops)[0]) ?? null;
+
+      activeStopId.onChange(nextActive);
+
+      if (nextActive) {
+         const stop = parsed.stops[nextActive];
+         onRgbaChange(stop.color ?? 'rgba(0, 0, 0, 1)');
+         onHueChange(rgbaToHue(stop.color ?? 'rgba(0, 0, 0, 1)'));
       }
 
-      const nextStops = stopsArrayToRecord(parsed.stops);
-      const firstId = Object.keys(nextStops)[0] ?? null;
-
-      stops.onChange(nextStops);
-      activeStopId.onChange(firstId);
-
-      stopsOrder?.onChange(orderIdsByPosition(nextStops));
-
-      if (firstId) {
-         const st = nextStops[firstId];
-         onAlphaChange(st.alpha ?? 1);
-         onHexChange(st.color ?? '#000000');
-         onHueChange(hexToHue(st.color ?? '#000000'));
-      }
-
-      didInitFromInputRef.current = true;
+      format?.onChange(parsed.format);
+      prefixes?.onChange(prev => ({
+         ...prev,
+         [parsed.format]: parsed.prefix || prev[parsed.format],
+      }));
    }, [input]);
 
    useEffect(() => {
@@ -143,49 +139,45 @@ export const GradientSlider = ({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(w * devicePixelRatio);
+      canvas.height = Math.round(h * devicePixelRatio);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const context = canvas.getContext('2d');
+      if (!context) return;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
+      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      context.clearRect(0, 0, w, h);
 
       const cell = 8;
       for (let y = 0; y < h; y += cell) {
          for (let x = 0; x < w; x += cell) {
             const odd = ((Math.floor(x / cell) + Math.floor(y / cell)) & 1) === 1;
-            ctx.fillStyle = odd ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
-            ctx.fillRect(x, y, cell, cell);
+            context.fillStyle = odd ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
+            context.fillRect(x, y, cell, cell);
          }
       }
 
-      const gradient = ctx.createLinearGradient(0, 0, w, 0);
+      const gradient = context.createLinearGradient(0, 0, w, 0);
 
       if (previewStops.length === 0) {
          gradient.addColorStop(0, 'rgba(0,0,0,0)');
          gradient.addColorStop(1, 'rgba(0,0,0,0)');
       } else if (previewStops.length === 1) {
-         const st = previewStops[0];
-         const { r, g, b } = hexToRgb(st.color);
-         const a = clamp(typeof st.alpha === 'number' ? st.alpha : 1, 0, 1);
-         gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${a})`);
-         gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${a})`);
+         const stop = previewStops[0];
+         gradient.addColorStop(0, stop.color);
+         gradient.addColorStop(1, stop.color);
       } else {
-         for (const st of previewStops) {
-            const { r, g, b } = hexToRgb(st.color);
-            const a = clamp(typeof st.alpha === 'number' ? st.alpha : 1, 0, 1);
-            const p = clamp(st.position, 0, 100) / 100;
-            gradient.addColorStop(p, `rgba(${r}, ${g}, ${b}, ${a})`);
+         for (const stop of previewStops) {
+            const p = clampN(stop.position, 0, 100) / 100;
+            gradient.addColorStop(p, stop.color);
          }
       }
 
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, w, h);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, w, h);
    }, [dimensions.w, dimensions.h, previewStops]);
 
    useEffect(() => {
@@ -196,17 +188,17 @@ export const GradientSlider = ({
          return;
       }
 
-      const gradientStr = buildLinearGradient(
-         previewStops.map(s => ({
-            position: s.position,
-            color: s.color,
-            alpha: s.alpha,
-         })),
-         90,
+      const f = format?.value ?? 'linear-gradient';
+      const prefixForFormat = prefixes?.value?.[f] ?? '';
+
+      const gradientString = buildGradient(
+         previewStops.map(s => ({ position: s.position, color: s.color })),
+         { format: f, angle: 90, prefix: prefixForFormat },
       );
 
-      debounce(() => onChange(gradientStr), updateDelay ?? 0, 'gradient-picker:onChange');
-   }, [previewStops, onChange, updateDelay]);
+      lastEmittedRef.current = gradientString;
+      debounce(() => onChange(gradientString), updateDelay ?? 0, debounceKeyRef.current);
+   }, [previewStops, onChange, updateDelay, format?.value, prefixes?.value]);
 
    const getPosWithOffset = (clientX: number) => {
       const rect = sliderRef.current?.getBoundingClientRect();
@@ -224,9 +216,8 @@ export const GradientSlider = ({
       if (!stop) return;
 
       activeStopId.onChange(stop.id);
-      onAlphaChange(stop.alpha ?? 1);
-      onHexChange(stop.color ?? '#acacac');
-      onHueChange(hexToHue(stop.color));
+      onRgbaChange(stop.color ?? 'rgba(0, 0, 0, 1)');
+      onHueChange(rgbaToHue(stop.color ?? 'rgba(0, 0, 0, 1)'));
 
       setDraggingStopId(id);
 
@@ -296,7 +287,6 @@ export const GradientSlider = ({
          };
 
          stopsOrder?.onChange(orderIdsByPosition(nextStops));
-
          return nextStops;
       });
 
@@ -322,12 +312,7 @@ export const GradientSlider = ({
 
       const safePos = stopGap(pos, Object.values(stops.value), 4);
 
-      const nextStop = {
-         id,
-         position: safePos,
-         color: hex,
-         alpha,
-      };
+      const nextStop = { id, position: safePos, color: rgba };
 
       stops.onChange((prev: Stops) => {
          const nextStops: Stops = { ...prev, [id]: nextStop };
@@ -337,9 +322,8 @@ export const GradientSlider = ({
 
       activeStopId.onChange(id);
 
-      onHexChange(hex);
-      onAlphaChange(alpha);
-      onHueChange(hexToHue(hex));
+      onRgbaChange(rgba);
+      onHueChange(rgbaToHue(rgba));
 
       setDraggingStopId(id);
       pointerOffsetPxRef.current = 0;
@@ -357,9 +341,8 @@ export const GradientSlider = ({
       if (!stop) return;
 
       activeStopId.onChange(stop.id);
-      onAlphaChange(stop.alpha ?? 1);
-      onHexChange(stop.color ?? '#acacac');
-      onHueChange(hexToHue(stop.color));
+      onRgbaChange(stop.color ?? 'rgba(0, 0, 0, 1)');
+      onHueChange(rgbaToHue(stop.color ?? 'rgba(0, 0, 0, 1)'));
    };
 
    const orderedStopsForRender = useMemo(() => {
@@ -369,10 +352,10 @@ export const GradientSlider = ({
       const fromOrder = order.map(id => map[id]).filter(Boolean) as Array<
          (typeof sortedStops)[number]
       >;
-      const missing = Object.values(map).filter(st => !order.includes(st.id));
+      const missing = Object.values(map).filter(stop => !order.includes(stop.id));
 
       return [...fromOrder, ...missing];
-   }, [stops.value, stopsOrder]);
+   }, [stops.value, stopsOrder, sortedStops]);
 
    return (
       <section
@@ -391,7 +374,6 @@ export const GradientSlider = ({
 
             const position =
                isDragging && draftPosition != null ? draftPosition : stop.position;
-
             const leftPx = leftPxFromPercent(position, dimensions.w);
 
             return (

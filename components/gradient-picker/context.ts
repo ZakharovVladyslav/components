@@ -1,5 +1,6 @@
 import { createContext, Dispatch, SetStateAction } from 'react';
 
+import { GradientFormats } from './components';
 import { Stops } from './types';
 
 interface Constituent<T> {
@@ -7,11 +8,21 @@ interface Constituent<T> {
    onChange: Dispatch<SetStateAction<T>>;
 }
 
+export type GradientPrefixes = Record<GradientFormats, string>;
+
 export interface IGradientContext {
    activeStopId: Constituent<Nullable<string>>;
    stops: Constituent<Stops>;
    stopsOrder?: Constituent<string[]>;
+   format?: Constituent<GradientFormats>;
+   prefixes?: Constituent<GradientPrefixes>;
 }
+
+const DEFAULT_PREFIXES: GradientPrefixes = {
+   'linear-gradient': '',
+   'radial-gradient': 'circle at center',
+   'conic-gradient': 'from 90deg at 50% 50%',
+};
 
 export const GradientContext = createContext<IGradientContext>({
    activeStopId: {
@@ -26,24 +37,26 @@ export const GradientContext = createContext<IGradientContext>({
       value: [],
       onChange: () => {},
    },
+   format: {
+      value: 'linear-gradient',
+      onChange: () => {},
+   },
+   prefixes: {
+      value: DEFAULT_PREFIXES,
+      onChange: () => {},
+   },
 });
 
-// --------------------------------------------------------------------
-
 export interface IColorContext {
-   hex: string;
+   rgba: string;
    hue: number;
-   alpha: number;
-   onHexChange: (hex: string) => void;
+   onRgbaChange: (rgba: string) => void;
    onHueChange: (hue: number) => void;
-   onAlphaChange: (opacity: number) => void;
 }
 
 export const ColorContext = createContext<IColorContext>({
-   hex: '#000000',
+   rgba: 'rgba(0, 0, 0, 1)',
    hue: 0,
-   alpha: 1,
-   onHexChange: () => {},
+   onRgbaChange: () => {},
    onHueChange: () => {},
-   onAlphaChange: () => {},
 });

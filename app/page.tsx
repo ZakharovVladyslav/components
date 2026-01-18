@@ -30,7 +30,15 @@ export default function Home() {
                      wrapper: s['alpha-slider-wrapper'],
                   },
                },
+               gradientFormats: {},
             }}
+            grid={[
+               'color-square',
+               { className: s.actions, children: ['eye-dropper', 'gradient-formats'] },
+               { className: s.slider, children: ['gradient-slider', 'stop-delete'] },
+               'hue-slider',
+               'alpha-slider',
+            ]}
             wrapperClassName={s['gradient-picker-wrapper']}
             onChange={setGradient}
             updateDelay={0}

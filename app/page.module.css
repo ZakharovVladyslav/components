@@ -13,23 +13,26 @@
    gap: 8px;
 }
 
-.gradient-slider-wrapper {
-   margin-top: 20px;
-
-   border-radius: 0px;
-   border-top-left-radius: 12px;
-   border-top-right-radius: 12px;
-}
-
 .hue-slider-wrapper {
-   border-radius: 0px;
    border: 1px solid white;
 }
 
 .alpha-slider-wrapper {
-   border-radius: 0px;
-   border-bottom-left-radius: 12px;
-   border-bottom-right-radius: 12px;
-
    border: 1px solid white;
+}
+
+.actions,
+.slider {
+   box-sizing: border-box;
+
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+}
+
+.right {
+   display: flex;
+   align-items: center;
+   justify-content: flex-end;
+   gap: 16px;
 }

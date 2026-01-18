@@ -1,0 +1,53 @@
+.wrapper {
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   gap: 8px;
+}
+
+.button {
+   background-color: transparent;
+   border: none;
+
+   cursor: pointer;
+
+   box-sizing: border-box;
+
+   padding-block: 0px;
+   padding-inline: 0px;
+   padding: 4px;
+   margin: 0;
+
+   display: flex;
+   justify-content: center;
+   align-items: center;
+
+   transition: background-color 0.2s ease-in-out;
+}
+
+.button.active {
+   background-color: #007acc;
+
+   border-radius: 4px;
+}
+
+.button:disabled {
+   cursor: not-allowed;
+}
+
+.button:disabled .icon {
+   color: gray;
+}
+
+.button.active .icon {
+   color: white;
+}
+
+.icon {
+   width: 16px;
+   height: 16px;
+
+   color: grey;
+
+   transition: color 0.2s ease-in-out;
+}

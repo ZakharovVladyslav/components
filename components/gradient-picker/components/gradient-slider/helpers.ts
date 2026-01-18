@@ -1,7 +1,6 @@
 import { CSSProperties, RefObject } from 'react';
 
 import { MIN_GAP } from './const';
-import { hexToRgb } from '../../helpers/color';
 import { clamp } from '../../helpers/number';
 import { Stop, Stops } from '../../types';
 
@@ -46,7 +45,7 @@ type BlockState = Nullable<{ neighborId: string; dir: -1 | 1 }>;
 
 const getNeighborsForPos = (pos: number, activeStopId: string, stops: Stops) => {
    const others = Object.values(stops)
-      .filter(s => s.id !== activeStopId)
+      .filter(stop => stop.id !== activeStopId)
       .slice()
       .sort((a, b) => a.position - b.position);
 
@@ -79,33 +78,33 @@ export const applyJump = (
    block: BlockState,
 ) => {
    let pos = Math.max(0, Math.min(100, rawPos));
-   const dir = lastRawPos == null ? 0 : rawPos - lastRawPos;
+   const direction = lastRawPos == null ? 0 : rawPos - lastRawPos;
 
    const { left, right } = getNeighborsForPos(pos, activeStopId, stops);
 
    if (block) {
-      const n = stops[block.neighborId] ?? null;
+      const neighbor = stops[block.neighborId] ?? null;
 
-      if (!n) {
+      if (!neighbor) {
          block = null;
       } else if (block.dir === 1) {
-         if (rawPos <= n.position - MIN_GAP) {
+         if (rawPos <= neighbor.position - MIN_GAP) {
             block = null;
-         } else if (rawPos < n.position + MIN_GAP) {
-            pos = n.position - MIN_GAP;
-            const nn = getNeighborsForPos(pos, activeStopId, stops);
-            pos = clampBetween(pos, nn.left, nn.right);
+         } else if (rawPos < neighbor.position + MIN_GAP) {
+            pos = neighbor.position - MIN_GAP;
+            const neighbors = getNeighborsForPos(pos, activeStopId, stops);
+            pos = clampBetween(pos, neighbors.left, neighbors.right);
             return { pos, block };
          } else {
             block = null;
          }
       } else {
-         if (rawPos >= n.position + MIN_GAP) {
+         if (rawPos >= neighbor.position + MIN_GAP) {
             block = null;
-         } else if (rawPos > n.position - MIN_GAP) {
-            pos = n.position + MIN_GAP;
-            const nn = getNeighborsForPos(pos, activeStopId, stops);
-            pos = clampBetween(pos, nn.left, nn.right);
+         } else if (rawPos > neighbor.position - MIN_GAP) {
+            pos = neighbor.position + MIN_GAP;
+            const neighbors = getNeighborsForPos(pos, activeStopId, stops);
+            pos = clampBetween(pos, neighbors.left, neighbors.right);
             return { pos, block };
          } else {
             block = null;
@@ -113,22 +112,22 @@ export const applyJump = (
       }
    }
 
-   if (dir > 0 && right) {
+   if (direction > 0 && right) {
       if (rawPos >= right.position - MIN_GAP && rawPos < right.position + MIN_GAP) {
          block = { neighborId: right.id, dir: 1 };
          pos = right.position - MIN_GAP;
-         const nn = getNeighborsForPos(pos, activeStopId, stops);
-         pos = clampBetween(pos, nn.left, nn.right);
+         const neighbors = getNeighborsForPos(pos, activeStopId, stops);
+         pos = clampBetween(pos, neighbors.left, neighbors.right);
          return { pos, block };
       }
    }
 
-   if (dir < 0 && left) {
+   if (direction < 0 && left) {
       if (rawPos <= left.position + MIN_GAP && rawPos > left.position - MIN_GAP) {
          block = { neighborId: left.id, dir: -1 };
          pos = left.position + MIN_GAP;
-         const nn = getNeighborsForPos(pos, activeStopId, stops);
-         pos = clampBetween(pos, nn.left, nn.right);
+         const neighbors = getNeighborsForPos(pos, activeStopId, stops);
+         pos = clampBetween(pos, neighbors.left, neighbors.right);
          return { pos, block };
       }
    }
@@ -138,17 +137,15 @@ export const applyJump = (
 };
 
 export const buildLinearGradient = (
-   stops: Array<{ position: number; color: string; alpha?: number }>,
+   stops: Array<{ position: number; color: string }>,
    angle = 90,
 ) => {
    const parts = stops
       .slice()
       .sort((a, b) => a.position - b.position)
-      .map(s => {
-         const { r, g, b } = hexToRgb(s.color);
-         const a = clamp(typeof s.alpha === 'number' ? s.alpha : 1, 0, 1);
-         const p = clamp(s.position, 0, 100);
-         return `rgba(${r}, ${g}, ${b}, ${a}) ${p}%`;
+      .map(stop => {
+         const p = clamp(stop.position, 0, 100);
+         return `${stop.color} ${p}%`;
       });
 
    return `linear-gradient(${angle}deg, ${parts.join(', ')})`;
@@ -159,7 +156,6 @@ export const getStopStyle = (stop: Stop & { leftPx?: number }): CSSProperties =>
 });
 
 export const getStopInnerStyle = (stop: Stop): CSSProperties => ({
-   opacity: stop.alpha,
    backgroundColor: stop.color,
 });
 
@@ -175,5 +171,5 @@ export const orderIdsByPosition = (stopsMap: Stops | null | undefined) => {
    return Object.values(map)
       .slice()
       .sort((x, y) => x.position - y.position)
-      .map(st => st.id);
+      .map(stop => stop.id);
 };
