@@ -1,12 +1,18 @@
-@reference '#styles';
-
 .slider {
-   @apply relative h-5 w-full;
-   @apply rounded-full border border-solid border-white;
+   position: relative;
+
+   height: 20px;
+   width: 100%;
+
+   border-radius: 9999px;
+   border: 1px solid white;
 }
 
 .bg {
-   @apply absolute inset-0 rounded-full;
+   position: absolute;
+   inset: 0;
+
+   border-radius: 9999px;
 }
 
 .checker {
@@ -34,27 +40,46 @@
 }
 
 .gradient {
-   @apply absolute inset-0 rounded-full;
+   position: absolute;
+   inset: 0;
+
+   border-radius: 9999px;
 }
 
 .stop {
-   @apply aspect-square h-6 cursor-pointer;
-   @apply box-border rounded-full border-4 border-solid border-white;
-   @apply absolute top-1/2 -translate-x-1/2 -translate-y-1/2;
-
    transition: border-width 0.2s ease-in-out;
+
+   aspect-ratio: 1 / 1;
+   height: 24px;
+
+   cursor: pointer;
+
+   box-sizing: border-box;
+
+   border-radius: 9999px;
+   border: 4px solid white;
+
+   position: absolute;
+   top: 50%;
+   transform: translate(-50%, -50%);
 }
 
 .inner {
-   @apply size-full rounded-full;
+   width: 100%;
+   height: 100%;
+
+   border-radius: 9999px;
 }
 
 .stop.active {
-   @apply border-8 border-white;
+   border: 8px solid white;
 }
 
 .canvas {
-   @apply absolute inset-0;
+   position: absolute;
+   inset: 0;
+
    pointer-events: none;
+
    border-radius: inherit;
 }

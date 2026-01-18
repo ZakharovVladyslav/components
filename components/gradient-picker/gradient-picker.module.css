@@ -1,6 +1,9 @@
-@reference '#styles';
-
 .wrapper {
-   @apply w-60;
-   @apply flex flex-col items-center justify-center gap-4;
+   width: 240px;
+
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   gap: 16px;
 }

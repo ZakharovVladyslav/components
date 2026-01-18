@@ -27,32 +27,30 @@ export type ColorSquareClassNames = {
 
 type TProps = {
    classNames?: Partial<ColorSquareClassNames>;
-   size?: number;
    onChange?: (hex: string) => void;
 };
 
-export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
+export const ColorSquare = ({ classNames, onChange }: TProps) => {
    const { hex, hue, onHexChange } = useContext(ColorContext);
 
    const { activeStopId, stops } = useContext(GradientContext);
 
-   const [sv, setSv] = useState<{ saturation: number; value: number }>(() => ({
+   const [saturationValue, setSaturationValue] = useState<{
+      saturation: number;
+      value: number;
+   }>(() => ({
       saturation: 1,
       value: 1,
    }));
-
    const [dimensions, setDimensions] = useState<{ w: number; h: number }>({
-      w: size ?? 0,
-      h: size ?? 0,
+      w: 0,
+      h: 0,
    });
-
    const [redrawTick, setRedrawTick] = useState<number>(0);
 
    const canvasRef = useRef<HTMLCanvasElement>(null);
    const wrapperRef = useRef<HTMLDivElement>(null);
-
    const draggingRef = useRef(false);
-
    const rafRef = useRef<number | null>(null);
    const pendingRef = useRef<{ s: number; v: number } | null>(null);
 
@@ -60,16 +58,10 @@ export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
 
    const marker = useMemo(() => {
       return {
-         x: sv.saturation * dimensions.w,
-         y: (1 - sv.value) * dimensions.h,
+         x: saturationValue.saturation * dimensions.w,
+         y: (1 - saturationValue.value) * dimensions.h,
       };
-   }, [sv.saturation, sv.value, dimensions.w, dimensions.h]);
-
-   const squareStyle = useMemo(() => {
-      return typeof size === 'number' && size > 0
-         ? { width: size, height: size }
-         : undefined;
-   }, [size]);
+   }, [saturationValue.saturation, saturationValue.value, dimensions.w, dimensions.h]);
 
    const pointerStyle = useMemo(
       () => ({
@@ -80,12 +72,6 @@ export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
    );
 
    useEffect(() => {
-      if (typeof size === 'number' && size > 0) setDimensions({ w: size, h: size });
-   }, [size]);
-
-   useEffect(() => {
-      if (typeof size === 'number' && size > 0) return;
-
       const element = wrapperRef.current;
       if (!element) return;
 
@@ -102,7 +88,7 @@ export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
 
       observer.observe(element);
       return () => observer.disconnect();
-   }, [size]);
+   }, []);
 
    useEffect(() => {
       const onResize = () => setRedrawTick(t => t + 1);
@@ -119,7 +105,7 @@ export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
 
       const next = { saturation: clamp01(hsv.s), value: clamp01(hsv.v) };
 
-      setSv(prev => {
+      setSaturationValue(prev => {
          const same =
             Math.abs(prev.saturation - next.saturation) < 1e-4 &&
             Math.abs(prev.value - next.value) < 1e-4;
@@ -208,7 +194,7 @@ export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
       const nextS = x;
       const nextV = 1 - y;
 
-      setSv({ saturation: nextS, value: nextV });
+      setSaturationValue({ saturation: nextS, value: nextV });
       scheduleCommit(nextS, nextV);
    };
 
@@ -231,7 +217,6 @@ export const ColorSquare = ({ classNames, size, onChange }: TProps) => {
       <div
          ref={wrapperRef}
          className={cn(s['color-square'], 'color-square', classNames?.square)}
-         style={squareStyle}
          onPointerDown={onPointerDown}
          onPointerMove={onPointerMove}
          onPointerUp={stopDrag}

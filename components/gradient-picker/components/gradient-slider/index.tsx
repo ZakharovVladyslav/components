@@ -4,18 +4,20 @@ import s from './gradient-slider.module.css';
 import {
    applyJump,
    buildLinearGradient,
-   clamp,
    clampN,
    getStopInnerStyle,
    leftPxFromPercent,
    makeId,
+   orderIdsByPosition,
    R,
+   sameIds,
    stopGap,
 } from './helpers';
 import { ColorContext, GradientContext } from '../../context';
 import { parseStopsFromLinearGradient, stopsArrayToRecord } from '../../helpers';
 import { hexToHue, hexToRgb } from '../../helpers/color';
 import { debounce } from '../../helpers/function';
+import { clamp } from '../../helpers/number';
 import { cn } from '../../helpers/string';
 import { Stops } from '../../types';
 
@@ -44,13 +46,16 @@ export const GradientSlider = ({
    onChange,
    updateDelay = 0,
 }: TProps) => {
-   const { activeStopId: activeStop, stops } = useContext(GradientContext);
+   const { activeStopId, stops, stopsOrder } = useContext(GradientContext);
    const { hex, alpha, onAlphaChange, onHexChange, onHueChange } =
       useContext(ColorContext);
 
    const [draftPosition, setDraftPosition] = useState<Nullable<number>>(null);
    const [draggingStopId, setDraggingStopId] = useState<Nullable<string>>(null);
-   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+   const [dimensions, setDimensions] = useState<{ w: number; h: number }>({
+      w: 0,
+      h: 0,
+   });
 
    const sliderRef = useRef<HTMLDivElement>(null);
    const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -79,6 +84,12 @@ export const GradientSlider = ({
    }, [sortedStops, draggingStopId, draftPosition]);
 
    useEffect(() => {
+      const desired = orderIdsByPosition(stops.value);
+      const current = stopsOrder?.value ?? [];
+      if (!sameIds(current, desired)) stopsOrder?.onChange(desired);
+   }, [stops.value, stopsOrder]);
+
+   useEffect(() => {
       if (didInitFromInputRef.current) return;
       if (!input) return;
 
@@ -92,7 +103,9 @@ export const GradientSlider = ({
       const firstId = Object.keys(nextStops)[0] ?? null;
 
       stops.onChange(nextStops);
-      activeStop.onChange(firstId);
+      activeStopId.onChange(firstId);
+
+      stopsOrder?.onChange(orderIdsByPosition(nextStops));
 
       if (firstId) {
          const st = nextStops[firstId];
@@ -200,7 +213,6 @@ export const GradientSlider = ({
       if (!rect) return 0;
 
       const x = clientX - pointerOffsetPxRef.current;
-
       const cxLocal = clampN(x - rect.left, R, rect.width - R);
 
       const t = (cxLocal - R) / Math.max(1, rect.width - 2 * R);
@@ -211,7 +223,7 @@ export const GradientSlider = ({
       const stop = stops.value[id];
       if (!stop) return;
 
-      activeStop.onChange(stop.id);
+      activeStopId.onChange(stop.id);
       onAlphaChange(stop.alpha ?? 1);
       onHexChange(stop.color ?? '#acacac');
       onHueChange(hexToHue(stop.color));
@@ -277,10 +289,16 @@ export const GradientSlider = ({
          blockRef.current,
       );
 
-      stops.onChange((prev: Stops) => ({
-         ...prev,
-         [draggingStopId]: { ...prev[draggingStopId], position: res.pos },
-      }));
+      stops.onChange((prev: Stops) => {
+         const nextStops: Stops = {
+            ...prev,
+            [draggingStopId]: { ...prev[draggingStopId], position: res.pos },
+         };
+
+         stopsOrder?.onChange(orderIdsByPosition(nextStops));
+
+         return nextStops;
+      });
 
       resetDragState();
    };
@@ -297,41 +315,64 @@ export const GradientSlider = ({
    const onTrackPointerDown = (e: PointerEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement;
       if (target.closest(`.${s.stop}`)) return;
-
       if ((e.buttons & 1) !== 1) return;
 
       const pos = getPosFromTrackClick(e.clientX);
-
       const id = makeId();
 
       const safePos = stopGap(pos, Object.values(stops.value), 4);
 
-      const next = {
+      const nextStop = {
          id,
          position: safePos,
          color: hex,
          alpha,
       };
 
-      stops.onChange((prev: Stops) => ({ ...prev, [id]: next }));
-      activeStop.onChange(id);
+      stops.onChange((prev: Stops) => {
+         const nextStops: Stops = { ...prev, [id]: nextStop };
+         stopsOrder?.onChange(orderIdsByPosition(nextStops));
+         return nextStops;
+      });
+
+      activeStopId.onChange(id);
 
       onHexChange(hex);
       onAlphaChange(alpha);
       onHueChange(hexToHue(hex));
+
+      setDraggingStopId(id);
+      pointerOffsetPxRef.current = 0;
+      lastRawPosRef.current = safePos;
+      blockRef.current = null;
+      setDraftPosition(safePos);
+
+      e.currentTarget.setPointerCapture(e.pointerId);
    };
 
    const onStopClick = (id: string) => () => {
-      if (activeStop.value === id) return;
+      if (activeStopId.value === id) return;
 
       const stop = stops.value[id];
       if (!stop) return;
 
-      activeStop.onChange(stop.id);
+      activeStopId.onChange(stop.id);
       onAlphaChange(stop.alpha ?? 1);
       onHexChange(stop.color ?? '#acacac');
       onHueChange(hexToHue(stop.color));
    };
+
+   const orderedStopsForRender = useMemo(() => {
+      const map = stops.value ?? {};
+      const order = stopsOrder?.value ?? [];
+
+      const fromOrder = order.map(id => map[id]).filter(Boolean) as Array<
+         (typeof sortedStops)[number]
+      >;
+      const missing = Object.values(map).filter(st => !order.includes(st.id));
+
+      return [...fromOrder, ...missing];
+   }, [stops.value, stopsOrder]);
 
    return (
       <section
@@ -344,8 +385,8 @@ export const GradientSlider = ({
       >
          <canvas ref={canvasRef} className={s.canvas} />
 
-         {Object.values(stops.value).map((stop, index) => {
-            const isSelected = activeStop.value === stop.id;
+         {orderedStopsForRender.map((stop, index) => {
+            const isSelected = activeStopId.value === stop.id;
             const isDragging = draggingStopId === stop.id;
 
             const position =

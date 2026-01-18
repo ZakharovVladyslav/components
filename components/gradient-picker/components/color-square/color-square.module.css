@@ -1,13 +1,28 @@
-@reference '#styles';
-
 .color-square {
-   @apply relative overflow-hidden rounded-xl;
-   @apply aspect-square h-auto w-full;
+   position: relative;
+
+   overflow: hidden;
+
+   border-radius: 12px;
+
+   aspect-ratio: 1 / 1;
+   height: auto;
+   width: 100%;
 }
 
 .pointer {
-   @apply absolute -translate-x-1/2 -translate-y-1/2 transform;
-   @apply pointer-events-none min-h-3.5 min-w-3.5 rounded-full;
-   @apply border-2 border-solid border-white;
-   @apply cursor-pointer shadow;
+   position: absolute;
+   transform: translate(-50%, -50%);
+
+   pointer-events: none;
+
+   min-height: 14px;
+   min-width: 14px;
+
+   border-radius: 9999px;
+   border: 2px solid white;
+
+   cursor: pointer;
+
+   box-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
 }

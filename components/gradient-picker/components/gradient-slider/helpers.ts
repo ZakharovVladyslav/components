@@ -2,6 +2,7 @@ import { CSSProperties, RefObject } from 'react';
 
 import { MIN_GAP } from './const';
 import { hexToRgb } from '../../helpers/color';
+import { clamp } from '../../helpers/number';
 import { Stop, Stops } from '../../types';
 
 export const STOP_SIZE = 24;
@@ -40,8 +41,6 @@ export const calcPosition = (
    pos = Math.max(0, Math.min(100, pos));
    return pos;
 };
-
-export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 
 type BlockState = Nullable<{ neighborId: string; dir: -1 | 1 }>;
 
@@ -163,3 +162,18 @@ export const getStopInnerStyle = (stop: Stop): CSSProperties => ({
    opacity: stop.alpha,
    backgroundColor: stop.color,
 });
+
+export const sameIds = (a: string[] = [], b: string[] = []) => {
+   if (a === b) return true;
+   if (a.length !== b.length) return false;
+   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+   return true;
+};
+
+export const orderIdsByPosition = (stopsMap: Stops | null | undefined) => {
+   const map = stopsMap ?? {};
+   return Object.values(map)
+      .slice()
+      .sort((x, y) => x.position - y.position)
+      .map(st => st.id);
+};

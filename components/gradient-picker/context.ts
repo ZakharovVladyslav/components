@@ -10,6 +10,7 @@ interface Constituent<T> {
 export interface IGradientContext {
    activeStopId: Constituent<Nullable<string>>;
    stops: Constituent<Stops>;
+   stopsOrder?: Constituent<string[]>;
 }
 
 export const GradientContext = createContext<IGradientContext>({
@@ -19,6 +20,10 @@ export const GradientContext = createContext<IGradientContext>({
    },
    stops: {
       value: {},
+      onChange: () => {},
+   },
+   stopsOrder: {
+      value: [],
       onChange: () => {},
    },
 });

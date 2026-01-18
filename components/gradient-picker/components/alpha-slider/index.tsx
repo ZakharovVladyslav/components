@@ -160,18 +160,18 @@ export const AlphaSlider = ({ classNames }: TProps) => {
 
    return (
       <section
-         className={cn(s.wrapper, 'alpha-slider-wrapper', classNames?.wrapper)}
+         className={cn('alpha-slider-wrapper', classNames?.wrapper, s.wrapper)}
          ref={wrapperRef}
          onPointerDown={onPointerDown}
          onPointerMove={onPointerMove}
       >
          <canvas
             ref={canvasRef}
-            className={cn(s.canvas, 'alpha-slider-canvas', classNames?.canvas)}
+            className={cn('alpha-slider-canvas', classNames?.canvas, s.canvas)}
          />
-         <div className={cn(s.track, 'alpha-slider-track', classNames?.track)} />
+         <div className={cn('alpha-slider-track', classNames?.track, s.track)} />
          <div
-            className={cn(s.thumb, 'alpha-slider-thumb', classNames?.thumb)}
+            className={cn('alpha-slider-thumb', classNames?.thumb, s.thumb)}
             style={thumbStyle}
          >
             <div className={s.inner} style={thumbInnerStyle} />

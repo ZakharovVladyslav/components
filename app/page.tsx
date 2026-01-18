@@ -14,18 +14,24 @@ export default function Home() {
       <main className={s.main} style={{ background: gradient }}>
          <GradientPicker
             gradient={gradient}
-            classNames={{
-               wrapper: s['gradient-picker-wrapper'],
+            childrenProps={{
                gradientSlider: {
-                  wrapper: s['gradient-slider-wrapper'],
+                  classNames: {
+                     wrapper: s['gradient-slider-wrapper'],
+                  },
                },
                hueSlider: {
-                  wrapper: s['hue-slider-wrapper'],
+                  classNames: {
+                     wrapper: s['hue-slider-wrapper'],
+                  },
                },
                alphaSlider: {
-                  wrapper: s['alpha-slider-wrapper'],
+                  classNames: {
+                     wrapper: s['alpha-slider-wrapper'],
+                  },
                },
             }}
+            wrapperClassName={s['gradient-picker-wrapper']}
             onChange={setGradient}
             updateDelay={0}
          />

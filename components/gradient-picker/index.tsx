@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 import {
    AlphaSlider,
    AlphaSliderClassNames,
    ColorSquare,
    ColorSquareClassNames,
+   DeleteStop,
+   DeleteStopClassNames,
    GradientSlider,
    GradientSliderClassNames,
    HueSlider,
    HueSliderClassNames,
 } from './components';
+import { HUE_MAX } from './components/hue-slider/const';
 import { INITIAL_STOPS } from './const';
 import { ColorContext, GradientContext } from './context';
 import s from './gradient-picker.module.css';
@@ -20,17 +23,30 @@ import { hexToHue } from './helpers/color';
 import { cn } from './helpers/string';
 import { Stops } from './types';
 
-type ClassNames = {
-   wrapper: string;
-   alphaSlider: Partial<AlphaSliderClassNames>;
-   hueSlider: Partial<HueSliderClassNames>;
-   gradientSlider: Partial<GradientSliderClassNames>;
-   colorSquare: Partial<ColorSquareClassNames>;
+type ChildrenProps = {
+   colorSquare?: {
+      classNames?: Partial<ColorSquareClassNames>;
+   };
+   deleteStop?: {
+      classNames?: Partial<DeleteStopClassNames>;
+      icon?: ReactNode;
+   };
+   gradientSlider?: {
+      classNames?: Partial<GradientSliderClassNames>;
+      updateDelay?: number;
+   };
+   hueSlider?: {
+      classNames?: Partial<HueSliderClassNames>;
+   };
+   alphaSlider?: {
+      classNames?: Partial<AlphaSliderClassNames>;
+   };
 };
 
 type TProps = {
    gradient: string;
-   classNames?: Partial<ClassNames>;
+   childrenProps?: ChildrenProps;
+   wrapperClassName?: string;
    updateDelay?: number;
    onChange: (gradient: string) => void;
 };
@@ -38,10 +54,12 @@ type TProps = {
 export const GradientPicker = ({
    gradient,
    updateDelay,
-   classNames,
+   childrenProps,
+   wrapperClassName,
    onChange,
 }: TProps) => {
    const [stops, setStops] = useState<Stops>(INITIAL_STOPS);
+   const [stopsOrder, setStopsOrder] = useState<string[]>(Object.keys(INITIAL_STOPS));
    const [activeStopId, setActiveStopId] = useState<string | null>('stop1');
 
    const activeStop = activeStopId ? stops[activeStopId] : null;
@@ -60,24 +78,35 @@ export const GradientPicker = ({
       if (!parsed) return;
 
       setStops(parsed);
+      setStopsOrder(Object.keys(parsed));
 
-      const firstId = Object.keys(parsed)[0] ?? null;
-      setActiveStopId(firstId);
+      const firstStopId = Object.keys(parsed)[0] ?? null;
 
-      if (firstId) {
-         const st = parsed[firstId];
-         setHex(st.color ?? '#000000');
-         setHue(hexToHue(st.color ?? '#000000'));
-         setOpacity(st.alpha ?? 1);
+      setActiveStopId(firstStopId);
+
+      if (firstStopId) {
+         const firstParsedStop = parsed[firstStopId];
+         setHex(firstParsedStop.color ?? '#000000');
+         setHue(hexToHue(firstParsedStop.color ?? '#000000'));
+         setOpacity(firstParsedStop.alpha ?? 1);
       }
    }, [gradient]);
 
    useEffect(() => {
       if (!activeStop) return;
-      setHex(activeStop.color);
-      setHue(hexToHue(activeStop.color));
-      setOpacity(activeStop.alpha ?? 1);
-   }, [activeStopId]);
+
+      const nextHex = activeStop.color ?? '#000000';
+      const nextOpacity = activeStop.alpha ?? 1;
+
+      setHex(nextHex);
+      setOpacity(nextOpacity);
+
+      setHue(prevHue => {
+         const computed = hexToHue(nextHex);
+         if (computed === 0 && prevHue > 300) return HUE_MAX;
+         return computed;
+      });
+   }, [activeStop]);
 
    const containerRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +115,7 @@ export const GradientPicker = ({
          value={{
             activeStopId: { value: activeStopId, onChange: setActiveStopId },
             stops: { value: stops, onChange: setStops },
+            stopsOrder: { value: stopsOrder, onChange: setStopsOrder },
          }}
       >
          <ColorContext.Provider
@@ -98,16 +128,20 @@ export const GradientPicker = ({
                onAlphaChange: setOpacity,
             }}
          >
-            <section className={cn(s.wrapper, classNames?.wrapper)} ref={containerRef}>
-               <ColorSquare classNames={classNames?.colorSquare} />
+            <section className={cn(s.wrapper, wrapperClassName)} ref={containerRef}>
+               <ColorSquare classNames={childrenProps?.colorSquare?.classNames} />
+               <DeleteStop
+                  icon={childrenProps?.deleteStop?.icon}
+                  classNames={childrenProps?.deleteStop?.classNames}
+               />
                <GradientSlider
                   input={gradient}
-                  updateDelay={updateDelay}
-                  classNames={classNames?.gradientSlider}
+                  updateDelay={childrenProps?.gradientSlider?.updateDelay ?? updateDelay}
+                  classNames={childrenProps?.gradientSlider?.classNames}
                   onChange={onChange}
                />
-               <HueSlider classNames={classNames?.hueSlider} />
-               <AlphaSlider classNames={classNames?.alphaSlider} />
+               <HueSlider classNames={childrenProps?.hueSlider?.classNames} />
+               <AlphaSlider classNames={childrenProps?.alphaSlider?.classNames} />
             </section>
          </ColorContext.Provider>
       </GradientContext.Provider>

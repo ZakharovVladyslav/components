@@ -2,22 +2,13 @@
 
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { HUE_MAX } from './const';
 import s from './hue-slider.module.css';
 import { ColorContext, GradientContext } from '../../context';
-import {
-   hexWithHue,
-   normalizeHue,
-   thumbLeftFromValue,
-   valueFromClientX,
-} from '../../helpers/color';
+import { hexWithHue, normalizeHue } from '../../helpers/color';
+import { clamp } from '../../helpers/number';
 import { cn } from '../../helpers/string';
 
-/**
- * Class names for customizing the Hue Slider component.
- * @property {string} wrapper - Class name for the slider wrapper.
- * @property {string} thumb - Class name for the slider thumb.
- * @property {string} canvas - Class name for the slider canvas.
- */
 export type HueSliderClassNames = {
    wrapper: string;
    thumb: string;
@@ -33,26 +24,35 @@ export const HueSlider = ({ classNames }: TProps) => {
    const { hex, hue, onHexChange, onHueChange } = useContext(ColorContext);
 
    const canvasRef = useRef<HTMLCanvasElement>(null);
-   const wrapperRef = useRef<HTMLDivElement>(null);
+   const wrapperRef = useRef<HTMLElement>(null);
+   const thumbRef = useRef<HTMLDivElement>(null);
 
-   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
+   const [dimensions, setDimensions] = useState<Record<'w' | 'h', number>>({
+      w: 0,
+      h: 0,
+   });
+   const [thumbR, setThumbR] = useState<number>(12);
 
    useEffect(() => {
-      const el = wrapperRef.current;
-      if (!el) return;
+      const element = wrapperRef.current;
+      if (!element) return;
 
-      const ro = new ResizeObserver(entries => {
-         const cr = entries[0]?.contentRect;
-         if (!cr) return;
-         const w = Math.floor(cr.width);
-         const h = Math.floor(cr.height);
+      const observer = new ResizeObserver(entries => {
+         const contentRect = entries[0]?.contentRect;
+         if (!contentRect) return;
+
+         const w = Math.floor(contentRect.width);
+         const h = Math.floor(contentRect.height);
          if (w <= 0 || h <= 0) return;
 
          setDimensions(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
+
+         const thumbRect = thumbRef.current?.getBoundingClientRect();
+         if (thumbRect?.width) setThumbR(Math.max(0, thumbRect.width / 2));
       });
 
-      ro.observe(el);
-      return () => ro.disconnect();
+      observer.observe(element);
+      return () => observer.disconnect();
    }, []);
 
    useEffect(() => {
@@ -62,19 +62,19 @@ export const HueSlider = ({ classNames }: TProps) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(w * devicePixelRatio);
+      canvas.height = Math.round(h * devicePixelRatio);
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const context = canvas.getContext('2d');
+      if (!context) return;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
+      context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      context.clearRect(0, 0, w, h);
 
-      const gradient = ctx.createLinearGradient(0, 0, w, 0);
+      const gradient = context.createLinearGradient(0, 0, w, 0);
       gradient.addColorStop(0, 'rgb(255, 0, 0)');
       gradient.addColorStop(1 / 6, 'rgb(255, 255, 0)');
       gradient.addColorStop(2 / 6, 'rgb(0, 255, 0)');
@@ -83,13 +83,15 @@ export const HueSlider = ({ classNames }: TProps) => {
       gradient.addColorStop(5 / 6, 'rgb(255, 0, 255)');
       gradient.addColorStop(1, 'rgb(255, 0, 0)');
 
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, w, h);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, w, h);
    }, [dimensions.w, dimensions.h]);
 
    const thumbLeft = useMemo(() => {
-      return thumbLeftFromValue(normalizeHue(hue) / 360, dimensions.w);
-   }, [hue, dimensions.w]);
+      const value01 = normalizeHue(hue) / 360;
+      const w = dimensions.w || 1;
+      return thumbR + clamp(value01, 0, 1) * Math.max(1, w - 2 * thumbR);
+   }, [hue, dimensions.w, thumbR]);
 
    const thumbStyle = useMemo(
       () => ({
@@ -144,8 +146,11 @@ export const HueSlider = ({ classNames }: TProps) => {
       const rect = wrapperRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      const t = valueFromClientX(clientX, rect);
-      scheduleHue(t * 360);
+      const cx = clamp(clientX - rect.left, thumbR, rect.width - thumbR);
+      const t = (cx - thumbR) / Math.max(1, rect.width - 2 * thumbR);
+
+      const nextHue = Math.min(t * 360, HUE_MAX);
+      scheduleHue(nextHue);
    };
 
    const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
@@ -160,17 +165,18 @@ export const HueSlider = ({ classNames }: TProps) => {
 
    return (
       <section
-         className={cn(s.wrapper, 'hue-slider-wrapper', classNames?.wrapper)}
+         className={cn(classNames?.wrapper, 'hue-slider-wrapper', s.wrapper)}
          ref={wrapperRef}
          onPointerDown={onPointerDown}
          onPointerMove={onPointerMove}
       >
          <canvas
             ref={canvasRef}
-            className={cn(s.canvas, 'hue-slider-canvas', classNames?.canvas)}
+            className={cn(classNames?.canvas, 'hue-slider-canvas', s.canvas)}
          />
          <div
-            className={cn(s.thumb, 'hue-slider-thumb', classNames?.thumb)}
+            ref={thumbRef}
+            className={cn(classNames?.thumb, 'hue-slider-thumb', s.thumb)}
             style={thumbStyle}
          />
       </section>

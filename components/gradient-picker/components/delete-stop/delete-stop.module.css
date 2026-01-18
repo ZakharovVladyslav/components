@@ -1,0 +1,11 @@
+.button {
+   background-color: transparent;
+   border: none;
+}
+
+.icon {
+   width: 16px;
+   height: 16px;
+
+   color: white;
+}

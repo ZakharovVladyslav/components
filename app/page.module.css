@@ -1,22 +1,35 @@
-@reference '#styles';
-
 .main {
-   @apply bg-ab-black w-full flex-1;
-   @apply flex items-center justify-center;
+   background-color: #121212;
+
+   width: 100%;
+   flex: 1;
+
+   display: flex;
+   align-items: center;
+   justify-content: center;
 }
 
 .gradient-picker-wrapper {
-   @apply gap-0;
+   gap: 8px;
 }
 
 .gradient-slider-wrapper {
-   @apply rounded-t-lg! rounded-none mt-5;
+   margin-top: 20px;
+
+   border-radius: 0px;
+   border-top-left-radius: 12px;
+   border-top-right-radius: 12px;
 }
 
 .hue-slider-wrapper {
-   @apply rounded-none;
+   border-radius: 0px;
+   border: 1px solid white;
 }
 
 .alpha-slider-wrapper {
-   @apply rounded-b-lg! rounded-none;
+   border-radius: 0px;
+   border-bottom-left-radius: 12px;
+   border-bottom-right-radius: 12px;
+
+   border: 1px solid white;
 }
