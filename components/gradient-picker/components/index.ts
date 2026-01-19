@@ -5,3 +5,4 @@ export * from './alpha-slider';
 export * from './delete-stop';
 export * from './gradient-formats';
 export * from './eye-dropper';
+export * from './angle-input';

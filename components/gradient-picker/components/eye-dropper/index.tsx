@@ -1,10 +1,11 @@
-import { ComponentType, ReactNode, SVGProps, useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 
 import s from './eye-dropper.module.css';
 import { ColorContext, GradientContext } from '../../context';
 import { hexToRgb, rgbToHue } from '../../helpers/color';
 import { cn } from '../../helpers/string';
 import { DropperIcon } from '../../icons';
+import { Icon } from '../../types';
 
 export type EyeDropperClassNames = {
    button?: string;
@@ -14,7 +15,7 @@ export type EyeDropperClassNames = {
 
 export type EyeDropperProps = {
    classNames?: Partial<EyeDropperClassNames>;
-   icon?: ComponentType<SVGProps<SVGSVGElement>> | ReactNode;
+   icon?: Icon;
 };
 
 export const EyeDropper = ({ classNames, icon }: EyeDropperProps) => {

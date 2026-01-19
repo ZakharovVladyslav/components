@@ -3,6 +3,11 @@
    border: none;
 
    cursor: pointer;
+
+   padding-inline: 0px;
+   padding-block: 0px;
+
+   line-height: 0;
 }
 
 .button:disabled {

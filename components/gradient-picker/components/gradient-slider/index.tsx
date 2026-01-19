@@ -38,7 +38,7 @@ export const GradientSlider = ({
    onChange,
    updateDelay = 0,
 }: TProps) => {
-   const { activeStopId, stops, stopsOrder, format, prefixes } =
+   const { activeStopId, angle, stops, stopsOrder, format, prefixes } =
       useContext(GradientContext);
    const { rgba, onRgbaChange, onHueChange } = useContext(ColorContext);
 
@@ -76,14 +76,21 @@ export const GradientSlider = ({
          .sort((a, b) => a.position - b.position);
    }, [sortedStops, draggingStopId, draftPosition]);
 
+   const desiredOrder = useMemo(() => orderIdsByPosition(stops.value), [stops.value]);
+   const stopsOrderValue = stopsOrder?.value ?? [];
+
    useEffect(() => {
-      const desired = orderIdsByPosition(stops.value);
-      const current = stopsOrder?.value ?? [];
-      if (!sameIds(current, desired)) stopsOrder?.onChange(desired);
-   }, [stops.value, stopsOrder]);
+      if (!stopsOrder) return;
+      if (!sameIds(stopsOrderValue, desiredOrder)) {
+         stopsOrder.onChange(desiredOrder);
+      }
+   }, [desiredOrder, stopsOrderValue, stopsOrder]);
 
    useEffect(() => {
       if (!input) return;
+
+      if (draggingStopId) return;
+
       if (lastEmittedRef.current === input) return;
 
       const parsed = parseGradientToStops(input);
@@ -193,12 +200,19 @@ export const GradientSlider = ({
 
       const gradientString = buildGradient(
          previewStops.map(s => ({ position: s.position, color: s.color })),
-         { format: f, angle: 90, prefix: prefixForFormat },
+         { format: f, angle: angle?.value ?? 90, prefix: prefixForFormat },
       );
 
       lastEmittedRef.current = gradientString;
       debounce(() => onChange(gradientString), updateDelay ?? 0, debounceKeyRef.current);
-   }, [previewStops, onChange, updateDelay, format?.value, prefixes?.value]);
+   }, [
+      previewStops,
+      onChange,
+      updateDelay,
+      format?.value,
+      prefixes?.value,
+      angle?.value,
+   ]);
 
    const getPosWithOffset = (clientX: number) => {
       const rect = sliderRef.current?.getBoundingClientRect();

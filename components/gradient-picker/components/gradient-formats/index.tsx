@@ -1,9 +1,10 @@
-import { ComponentType, ReactNode, SVGProps, useContext, useMemo } from 'react';
+import { ReactNode, useContext, useMemo } from 'react';
 
 import { GRADIENT_FORMATS } from './const';
 import s from './gradient-formats.module.css';
 import { GradientContext } from '../../context';
 import { cn } from '../../helpers/string';
+import { Icon } from '../../types';
 
 export type GradientFormats = 'linear-gradient' | 'radial-gradient' | 'conic-gradient';
 
@@ -22,9 +23,7 @@ export type GradientFormatsClassNames = {
 export type GradientFormatsProps = {
    allowedFormats?: GradientFormats[];
    classNames?: Partial<GradientFormatsClassNames>;
-   icons?: Partial<
-      Record<GradientFormats, ComponentType<SVGProps<SVGSVGElement>> | ReactNode>
-   >;
+   icons?: Partial<Record<GradientFormats, Icon>>;
 };
 
 export const PickGradientFormats = ({
@@ -41,9 +40,7 @@ export const PickGradientFormats = ({
          Object.entries(GRADIENT_FORMATS).filter(([key]) =>
             allowedFormats.includes(key as GradientFormats),
          ),
-      ) as Partial<
-         Record<GradientFormats, ComponentType<SVGProps<SVGSVGElement>> | ReactNode>
-      >;
+      ) as Partial<Record<GradientFormats, Icon>>;
    }, [allowedFormats]);
 
    const setDefaultsFor = (next: GradientFormats) => {

@@ -16,6 +16,7 @@ export interface IGradientContext {
    stopsOrder?: Constituent<string[]>;
    format?: Constituent<GradientFormats>;
    prefixes?: Constituent<GradientPrefixes>;
+   angle?: Constituent<number>;
 }
 
 const DEFAULT_PREFIXES: GradientPrefixes = {
@@ -43,6 +44,10 @@ export const GradientContext = createContext<IGradientContext>({
    },
    prefixes: {
       value: DEFAULT_PREFIXES,
+      onChange: () => {},
+   },
+   angle: {
+      value: 90,
       onChange: () => {},
    },
 });

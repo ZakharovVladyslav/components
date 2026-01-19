@@ -4,6 +4,7 @@ import { Fragment, ReactNode, useEffect, useMemo, useRef, useState } from 'react
 
 import {
    AlphaSlider,
+   AngleInput,
    ColorSquare,
    DeleteStop,
    EyeDropper,
@@ -49,6 +50,7 @@ export const GradientPicker = ({
    const [activeStopId, setActiveStopId] = useState<string | null>('stop1');
    const [format, setFormat] = useState<GradientFormats>('linear-gradient');
    const [prefixes, setPrefixes] = useState<GradientPrefixes>(DEFAULT_PREFIXES);
+   const [angle, setAngle] = useState<number>(90);
 
    const activeStop = activeStopId ? stops[activeStopId] : null;
 
@@ -103,12 +105,8 @@ export const GradientPicker = ({
 
    const MAP_ITEMS: Record<Nodes, ReactNode> = useMemo(
       () => ({
-         'alpha-slider': (
-            <AlphaSlider classNames={childrenProps?.alphaSlider?.classNames} />
-         ),
-         'color-square': (
-            <ColorSquare classNames={childrenProps?.colorSquare?.classNames} />
-         ),
+         'alpha-slider': <AlphaSlider {...childrenProps?.alphaSlider} />,
+         'color-square': <ColorSquare {...childrenProps?.colorSquare} />,
          'gradient-slider': (
             <GradientSlider
                input={gradient}
@@ -117,26 +115,11 @@ export const GradientPicker = ({
                onChange={onChange}
             />
          ),
-         'hue-slider': <HueSlider classNames={childrenProps?.hueSlider?.classNames} />,
-         'stop-delete': (
-            <DeleteStop
-               icon={childrenProps?.deleteStop?.icon}
-               classNames={childrenProps?.deleteStop?.classNames}
-            />
-         ),
-         'gradient-formats': (
-            <PickGradientFormats
-               classNames={childrenProps?.gradientFormats?.classNames}
-               allowedFormats={childrenProps?.gradientFormats?.allowedFormats}
-               icons={childrenProps?.gradientFormats?.icons}
-            />
-         ),
-         'eye-dropper': (
-            <EyeDropper
-               icon={childrenProps?.eyeDropper?.icon}
-               classNames={childrenProps?.eyeDropper?.classNames}
-            />
-         ),
+         'hue-slider': <HueSlider {...childrenProps?.hueSlider} />,
+         'stop-delete': <DeleteStop {...childrenProps?.deleteStop} />,
+         'gradient-formats': <PickGradientFormats {...childrenProps?.gradientFormats} />,
+         'eye-dropper': <EyeDropper {...childrenProps?.eyeDropper} />,
+         'angle-input': <AngleInput {...childrenProps?.angleInput} />,
       }),
       [childrenProps, gradient, onChange, updateDelay],
    );
@@ -161,6 +144,7 @@ export const GradientPicker = ({
             stopsOrder: { value: stopsOrder, onChange: setStopsOrder },
             format: { value: format, onChange: setFormat },
             prefixes: { value: prefixes, onChange: setPrefixes },
+            angle: { value: angle, onChange: setAngle },
          }}
       >
          <ColorContext.Provider

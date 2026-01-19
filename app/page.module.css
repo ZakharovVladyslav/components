@@ -11,6 +11,8 @@
 
 .gradient-picker-wrapper {
    gap: 8px;
+
+   width: 300px;
 }
 
 .hue-slider-wrapper {
@@ -28,6 +30,8 @@
    display: flex;
    align-items: center;
    justify-content: space-between;
+
+   gap: 8px;
 }
 
 .right {

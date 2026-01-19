@@ -9,6 +9,7 @@ import {
    GradientFormats,
    GradientFormatsClassNames,
    EyeDropperClassNames,
+   AngleInputClassNames,
 } from './components';
 
 export type Stop = {
@@ -26,7 +27,8 @@ export type Nodes =
    | 'alpha-slider'
    | 'stop-delete'
    | 'gradient-formats'
-   | 'eye-dropper';
+   | 'eye-dropper'
+   | 'angle-input';
 
 export type GridItem = Nodes | { className?: string; children: (Nodes | GridItem)[] };
 export type Grid = GridItem[];
@@ -60,4 +62,14 @@ export type ChildrenProps = {
       classNames?: EyeDropperClassNames;
       icon?: ComponentType<SVGProps<SVGSVGElement>> | ReactNode;
    };
+   angleInput?: {
+      icons?: {
+         angle?: Icon;
+         increment?: Icon;
+         decrement?: Icon;
+      };
+      classNames?: AngleInputClassNames;
+   };
 };
+
+export type Icon = Nullable<ComponentType<SVGProps<SVGSVGElement>> | ReactNode>;

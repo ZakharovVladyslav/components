@@ -25,19 +25,32 @@ export default function Home() {
                      wrapper: s['hue-slider-wrapper'],
                   },
                },
+               colorSquare: {
+                  classNames: {
+                     square: s['color-square'],
+                  },
+               },
                alphaSlider: {
                   classNames: {
                      wrapper: s['alpha-slider-wrapper'],
                   },
                },
-               gradientFormats: {},
+               angleInput: {
+                  icons: {
+                     decrement: null,
+                     increment: null,
+                  },
+               },
             }}
             grid={[
                'color-square',
-               { className: s.actions, children: ['eye-dropper', 'gradient-formats'] },
+               {
+                  className: s.actions,
+                  children: ['eye-dropper', 'angle-input', 'gradient-formats'],
+               },
                { className: s.slider, children: ['gradient-slider', 'stop-delete'] },
-               'hue-slider',
                'alpha-slider',
+               'hue-slider',
             ]}
             wrapperClassName={s['gradient-picker-wrapper']}
             onChange={setGradient}
