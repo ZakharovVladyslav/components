@@ -6,3 +6,6 @@ export * from './delete-stop';
 export * from './gradient-formats';
 export * from './eye-dropper';
 export * from './angle-input';
+export * from './preview';
+export * from './stop-position';
+export * from './gradient-string';

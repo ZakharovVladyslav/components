@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Key, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
    AlphaSlider,
@@ -10,8 +10,11 @@ import {
    EyeDropper,
    GradientFormats,
    GradientSlider,
+   GradientString,
    HueSlider,
    PickGradientFormats,
+   Preview,
+   StopPosition,
 } from './components';
 import { HUE_MAX } from './components/hue-slider/const';
 import { INITIAL_STOPS } from './const';
@@ -51,6 +54,8 @@ export const GradientPicker = ({
    const [format, setFormat] = useState<GradientFormats>('linear-gradient');
    const [prefixes, setPrefixes] = useState<GradientPrefixes>(DEFAULT_PREFIXES);
    const [angle, setAngle] = useState<number>(90);
+   const [draggingStopId, setDraggingStopId] = useState<Nullable<string>>(null);
+   const [draftPosition, setDraftPosition] = useState<Nullable<number>>(null);
 
    const activeStop = activeStopId ? stops[activeStopId] : null;
 
@@ -120,11 +125,16 @@ export const GradientPicker = ({
          'gradient-formats': <PickGradientFormats {...childrenProps?.gradientFormats} />,
          'eye-dropper': <EyeDropper {...childrenProps?.eyeDropper} />,
          'angle-input': <AngleInput {...childrenProps?.angleInput} />,
+         preview: <Preview {...childrenProps?.preview} gradient={gradient} />,
+         'stop-position': <StopPosition {...childrenProps?.stopPosition} />,
+         'gradient-string': (
+            <GradientString {...childrenProps?.gradientString} gradient={gradient} />
+         ),
       }),
       [childrenProps, gradient, onChange, updateDelay],
    );
 
-   const renderGridItem = (item: Nodes | GridItem, key: React.Key): ReactNode => {
+   const renderGridItem = (item: Nodes | GridItem, key: Key): ReactNode => {
       if (typeof item === 'string') {
          return <Fragment key={key}>{MAP_ITEMS[item]}</Fragment>;
       }
@@ -145,6 +155,8 @@ export const GradientPicker = ({
             format: { value: format, onChange: setFormat },
             prefixes: { value: prefixes, onChange: setPrefixes },
             angle: { value: angle, onChange: setAngle },
+            draggingStopId: { value: draggingStopId, onChange: setDraggingStopId },
+            draftPosition: { value: draftPosition, onChange: setDraftPosition },
          }}
       >
          <ColorContext.Provider

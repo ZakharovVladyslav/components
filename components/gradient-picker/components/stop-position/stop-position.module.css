@@ -13,39 +13,38 @@
    background-color: rgba(255, 255, 255, 0.3);
 }
 
-.icon {
-   width: 14px;
-
+.label {
    color: white;
+
+   font-size: 12px;
 }
 
 .input-wrapper {
    display: flex;
+   align-items: center;
+   justify-content: center;
    gap: 1px;
-
-   width: 54px;
 
    box-sizing: border-box;
 
    cursor: text;
+
+   font-size: 12px;
 }
 
 .input {
-   font-size: 12px;
-   font-family: 'Sora', sans-serif;
-   font-weight: 400;
-   color: white;
-
    field-sizing: content;
-
-   border: none;
 
    background-color: transparent;
 
-   padding-inline: 0;
-   padding-block: 0;
+   border: none;
+
+   padding: 0;
 
    line-height: 0;
+
+   color: white;
+   font-size: inherit;
 
    outline: none;
 }
@@ -54,8 +53,16 @@
    outline: none;
 }
 
-.degree {
-   line-height: 0.75;
+.suffix {
+   line-height: 1;
+
+   color: white;
+
+   font-size: inherit;
+}
+
+.icon {
+   width: 14px;
 
    color: white;
 }

@@ -23,8 +23,7 @@
    border: 1px solid white;
 }
 
-.actions,
-.slider {
+.section {
    box-sizing: border-box;
 
    display: flex;

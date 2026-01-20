@@ -5,9 +5,11 @@ import { useState } from 'react';
 import { GradientPicker } from '../components';
 import s from './page.module.css';
 
+import { cn } from '@/components/gradient-picker/helpers/string';
+
 export default function Home() {
    const [gradient, setGradient] = useState<string>(
-      'linear-gradient(90deg, #0000ff 50%,  #00ff00 90%)',
+      'linear-gradient(90deg, rgba(10, 10, 193, 1) 0%, rgba(163, 0, 255, 1) 100%)',
    );
 
    return (
@@ -35,22 +37,26 @@ export default function Home() {
                      wrapper: s['alpha-slider-wrapper'],
                   },
                },
-               angleInput: {
-                  icons: {
-                     decrement: null,
-                     increment: null,
-                  },
-               },
+               stopPosition: {},
             }}
             grid={[
                'color-square',
                {
-                  className: s.actions,
-                  children: ['eye-dropper', 'angle-input', 'gradient-formats'],
+                  className: cn(s.actions, s.section),
+                  children: ['eye-dropper', 'gradient-formats'],
                },
-               { className: s.slider, children: ['gradient-slider', 'stop-delete'] },
+               {
+                  className: cn(s['stop-controls'], s.section),
+                  children: ['stop-position', 'angle-input'],
+               },
+               {
+                  className: cn(s.slider, s.section),
+                  children: ['gradient-slider', 'stop-delete'],
+               },
                'alpha-slider',
                'hue-slider',
+               'preview',
+               'gradient-string',
             ]}
             wrapperClassName={s['gradient-picker-wrapper']}
             onChange={setGradient}

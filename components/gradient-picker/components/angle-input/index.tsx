@@ -1,17 +1,11 @@
-import {
-   ChangeEvent,
-   ReactNode,
-   useCallback,
-   useContext,
-   useEffect,
-   useRef,
-} from 'react';
+import { ChangeEvent, useCallback, useContext, useEffect, useRef } from 'react';
 
 import s from './angle-input.module.css';
 import { GradientContext } from '../../context';
 import { cn } from '../../helpers/string';
 import { AngleIcon, ChevronIcon } from '../../icons';
 import { Icon } from '../../types';
+import { renderIcon } from '../helpers';
 
 export type AngleInputClassNames = {
    wrapper?: string;
@@ -30,23 +24,6 @@ export type AngleInputProps = {
       decrement?: Icon;
    };
    classNames?: AngleInputClassNames;
-};
-
-const renderIcon = (
-   icon: Nullable<Maybe<Icon>>,
-   fallback: ReactNode,
-   className: string,
-) => {
-   if (icon === null) return null;
-
-   if (!icon) return fallback;
-
-   if (typeof icon === 'function') {
-      const Cmp = icon;
-      return <Cmp className={className} />;
-   }
-
-   return icon;
 };
 
 export const AngleInput = ({ classNames, icons }: AngleInputProps) => {

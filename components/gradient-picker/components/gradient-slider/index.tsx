@@ -38,23 +38,28 @@ export const GradientSlider = ({
    onChange,
    updateDelay = 0,
 }: TProps) => {
-   const { activeStopId, angle, stops, stopsOrder, format, prefixes } =
-      useContext(GradientContext);
+   const {
+      activeStopId,
+      angle,
+      stops,
+      stopsOrder,
+      format,
+      prefixes,
+      draftPosition,
+      draggingStopId,
+   } = useContext(GradientContext);
    const { rgba, onRgbaChange, onHueChange } = useContext(ColorContext);
 
-   const [draftPosition, setDraftPosition] = useState<Nullable<number>>(null);
-   const [draggingStopId, setDraggingStopId] = useState<Nullable<string>>(null);
    const [dimensions, setDimensions] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
    const sliderRef = useRef<HTMLDivElement>(null);
    const canvasRef = useRef<HTMLCanvasElement>(null);
-
    const skipFirstEmitRef = useRef(true);
    const lastRawPosRef = useRef<Nullable<number>>(null);
    const blockRef = useRef<Nullable<{ neighborId: string; dir: -1 | 1 }>>(null);
    const pointerOffsetPxRef = useRef(0);
-
-   const lastEmittedRef = useRef<string | null>(null);
+   const draftPosRef = useRef<Nullable<number>>(null);
+   const lastEmittedRef = useRef<Nullable<string>>(null);
    const debounceKeyRef = useRef(
       `gradient-picker:onChange:${Math.random().toString(36).slice(2)}`,
    );
@@ -66,49 +71,63 @@ export const GradientSlider = ({
    }, [stops.value]);
 
    const previewStops = useMemo(() => {
-      if (!draggingStopId || draftPosition == null) return sortedStops;
+      const dragId = draggingStopId?.value;
+      const draftPos = draftPosition?.value;
+
+      if (!dragId || draftPos == null) return sortedStops;
 
       return sortedStops
-         .map(stop =>
-            stop.id === draggingStopId ? { ...stop, position: draftPosition } : stop,
-         )
+         .map(stop => (stop.id === dragId ? { ...stop, position: draftPos } : stop))
          .slice()
-         .sort((a, b) => a.position - b.position);
-   }, [sortedStops, draggingStopId, draftPosition]);
+         .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+   }, [sortedStops, draggingStopId?.value, draftPosition?.value]);
 
-   const desiredOrder = useMemo(() => orderIdsByPosition(stops.value), [stops.value]);
-   const stopsOrderValue = stopsOrder?.value ?? [];
+   useEffect(() => {
+      draftPosRef.current = draftPosition?.value ?? null;
+   }, [draftPosition?.value]);
 
    useEffect(() => {
       if (!stopsOrder) return;
-      if (!sameIds(stopsOrderValue, desiredOrder)) {
-         stopsOrder.onChange(desiredOrder);
+
+      const desired = orderIdsByPosition(stops.value);
+      const current = stopsOrder.value ?? [];
+
+      if (!sameIds(current, desired)) {
+         stopsOrder.onChange(desired);
       }
-   }, [desiredOrder, stopsOrderValue, stopsOrder]);
+   }, [stops.value, stopsOrder?.value]);
 
    useEffect(() => {
       if (!input) return;
-
-      if (draggingStopId) return;
+      if (draggingStopId?.value) return;
 
       if (lastEmittedRef.current === input) return;
 
       const parsed = parseGradientToStops(input);
       if (!parsed) return;
 
-      stops.onChange(parsed.stops);
-      stopsOrder?.onChange(orderIdsByPosition(parsed.stops));
+      const currentStops = stops.value ?? {};
+      const nextStops = parsed.stops ?? {};
+
+      if (JSON.stringify(currentStops) === JSON.stringify(nextStops)) {
+         return;
+      }
+
+      lastEmittedRef.current = input;
+
+      stops.onChange(nextStops);
+      stopsOrder?.onChange(orderIdsByPosition(nextStops));
 
       const currentActive = activeStopId.value;
       const nextActive =
-         (currentActive && parsed.stops[currentActive]
+         (currentActive && nextStops[currentActive]
             ? currentActive
-            : Object.keys(parsed.stops)[0]) ?? null;
+            : Object.keys(nextStops)[0]) ?? null;
 
       activeStopId.onChange(nextActive);
 
       if (nextActive) {
-         const stop = parsed.stops[nextActive];
+         const stop = nextStops[nextActive];
          onRgbaChange(stop.color ?? 'rgba(0, 0, 0, 1)');
          onHueChange(rgbaToHue(stop.color ?? 'rgba(0, 0, 0, 1)'));
       }
@@ -118,7 +137,7 @@ export const GradientSlider = ({
          ...prev,
          [parsed.format]: parsed.prefix || prev[parsed.format],
       }));
-   }, [input]);
+   }, [input, draggingStopId?.value, stops.value]);
 
    useEffect(() => {
       const element = sliderRef.current;
@@ -178,7 +197,7 @@ export const GradientSlider = ({
          gradient.addColorStop(1, stop.color);
       } else {
          for (const stop of previewStops) {
-            const p = clampN(stop.position, 0, 100) / 100;
+            const p = clampN(stop.position ?? 0, 0, 100) / 100;
             gradient.addColorStop(p, stop.color);
          }
       }
@@ -190,6 +209,8 @@ export const GradientSlider = ({
    useEffect(() => {
       if (!onChange) return;
 
+      if (draggingStopId?.value) return;
+
       if (skipFirstEmitRef.current) {
          skipFirstEmitRef.current = false;
          return;
@@ -199,9 +220,11 @@ export const GradientSlider = ({
       const prefixForFormat = prefixes?.value?.[f] ?? '';
 
       const gradientString = buildGradient(
-         previewStops.map(s => ({ position: s.position, color: s.color })),
+         previewStops.map(s => ({ position: s.position ?? 0, color: s.color })),
          { format: f, angle: angle?.value ?? 90, prefix: prefixForFormat },
       );
+
+      if (lastEmittedRef.current === gradientString) return;
 
       lastEmittedRef.current = gradientString;
       debounce(() => onChange(gradientString), updateDelay ?? 0, debounceKeyRef.current);
@@ -212,6 +235,7 @@ export const GradientSlider = ({
       format?.value,
       prefixes?.value,
       angle?.value,
+      draggingStopId?.value,
    ]);
 
    const getPosWithOffset = (clientX: number) => {
@@ -233,7 +257,7 @@ export const GradientSlider = ({
       onRgbaChange(stop.color ?? 'rgba(0, 0, 0, 1)');
       onHueChange(rgbaToHue(stop.color ?? 'rgba(0, 0, 0, 1)'));
 
-      setDraggingStopId(id);
+      draggingStopId?.onChange(id);
 
       const targetRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const targetCenterX = targetRect.left + targetRect.width / 2;
@@ -250,18 +274,18 @@ export const GradientSlider = ({
 
       lastRawPosRef.current = raw;
       blockRef.current = res.block;
-      setDraftPosition(res.pos);
+      draftPosition?.onChange(res.pos);
 
       e.currentTarget.setPointerCapture(e.pointerId);
    };
-
    const onSliderPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-      if (!draggingStopId) return;
+      const dragId = draggingStopId?.value;
+      if (!dragId) return;
 
       const raw = getPosWithOffset(e.clientX);
       const res = applyJump(
          raw,
-         draggingStopId,
+         dragId,
          stops.value,
          lastRawPosRef.current,
          blockRef.current,
@@ -269,26 +293,34 @@ export const GradientSlider = ({
 
       lastRawPosRef.current = raw;
       blockRef.current = res.block;
-      setDraftPosition(res.pos);
+
+      const next = Math.round(res.pos * 1000) / 1000;
+      if (draftPosRef.current === next) return;
+
+      draftPosRef.current = next;
+      draftPosition?.onChange(next);
    };
 
    const resetDragState = () => {
-      setDraggingStopId(null);
-      setDraftPosition(null);
+      draggingStopId?.onChange(null);
+      draftPosition?.onChange(null);
       lastRawPosRef.current = null;
       blockRef.current = null;
       pointerOffsetPxRef.current = 0;
    };
 
    const onSliderPointerUp = () => {
-      if (!draggingStopId || draftPosition == null) {
+      const dragId = draggingStopId?.value;
+      const draftPos = draftPosition?.value;
+
+      if (!dragId || draftPos == null) {
          resetDragState();
          return;
       }
 
       const res = applyJump(
-         draftPosition,
-         draggingStopId,
+         draftPos,
+         dragId,
          stops.value,
          lastRawPosRef.current,
          blockRef.current,
@@ -297,7 +329,7 @@ export const GradientSlider = ({
       stops.onChange((prev: Stops) => {
          const nextStops: Stops = {
             ...prev,
-            [draggingStopId]: { ...prev[draggingStopId], position: res.pos },
+            [dragId]: { ...prev[dragId], position: res.pos },
          };
 
          stopsOrder?.onChange(orderIdsByPosition(nextStops));
@@ -339,11 +371,11 @@ export const GradientSlider = ({
       onRgbaChange(rgba);
       onHueChange(rgbaToHue(rgba));
 
-      setDraggingStopId(id);
+      draggingStopId?.onChange(id);
       pointerOffsetPxRef.current = 0;
       lastRawPosRef.current = safePos;
       blockRef.current = null;
-      setDraftPosition(safePos);
+      draftPosition?.onChange(safePos);
 
       e.currentTarget.setPointerCapture(e.pointerId);
    };
@@ -369,7 +401,7 @@ export const GradientSlider = ({
       const missing = Object.values(map).filter(stop => !order.includes(stop.id));
 
       return [...fromOrder, ...missing];
-   }, [stops.value, stopsOrder, sortedStops]);
+   }, [stops.value, stopsOrder?.value, sortedStops]);
 
    return (
       <section
@@ -384,11 +416,13 @@ export const GradientSlider = ({
 
          {orderedStopsForRender.map((stop, index) => {
             const isSelected = activeStopId.value === stop.id;
-            const isDragging = draggingStopId === stop.id;
+            const isDragging = draggingStopId?.value === stop.id;
 
             const position =
-               isDragging && draftPosition != null ? draftPosition : stop.position;
-            const leftPx = leftPxFromPercent(position, dimensions.w);
+               isDragging && draftPosition != null
+                  ? (draftPosition.value ?? null)
+                  : stop.position;
+            const leftPx = leftPxFromPercent(position ?? 0, dimensions.w);
 
             return (
                <div
@@ -404,7 +438,10 @@ export const GradientSlider = ({
                >
                   <div
                      className={s.inner}
-                     style={getStopInnerStyle({ ...stop, position })}
+                     style={getStopInnerStyle({
+                        ...stop,
+                        position: position ?? stop.position,
+                     })}
                   />
                </div>
             );

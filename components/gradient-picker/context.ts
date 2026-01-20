@@ -17,6 +17,8 @@ export interface IGradientContext {
    format?: Constituent<GradientFormats>;
    prefixes?: Constituent<GradientPrefixes>;
    angle?: Constituent<number>;
+   draggingStopId?: Constituent<Nullable<string>>;
+   draftPosition?: Constituent<Nullable<number>>;
 }
 
 const DEFAULT_PREFIXES: GradientPrefixes = {
@@ -50,6 +52,8 @@ export const GradientContext = createContext<IGradientContext>({
       value: 90,
       onChange: () => {},
    },
+   draggingStopId: { value: null, onChange: () => {} },
+   draftPosition: { value: null, onChange: () => {} },
 });
 
 export interface IColorContext {

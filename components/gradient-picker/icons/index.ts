@@ -5,3 +5,4 @@ export * from './radial-gradient-icon';
 export * from './dropper-icon';
 export * from './angle-icon';
 export * from './chevron-icon';
+export * from './clipboard-icon';

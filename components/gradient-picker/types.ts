@@ -10,6 +10,8 @@ import {
    GradientFormatsClassNames,
    EyeDropperClassNames,
    AngleInputClassNames,
+   StopPositionProps,
+   GradientStringClassNames,
 } from './components';
 
 export type Stop = {
@@ -28,7 +30,10 @@ export type Nodes =
    | 'stop-delete'
    | 'gradient-formats'
    | 'eye-dropper'
-   | 'angle-input';
+   | 'angle-input'
+   | 'preview'
+   | 'stop-position'
+   | 'gradient-string';
 
 export type GridItem = Nodes | { className?: string; children: (Nodes | GridItem)[] };
 export type Grid = GridItem[];
@@ -69,6 +74,14 @@ export type ChildrenProps = {
          decrement?: Icon;
       };
       classNames?: AngleInputClassNames;
+   };
+   preview?: {
+      className?: string;
+   };
+   stopPosition?: Partial<StopPositionProps>;
+   gradientString?: {
+      classNames?: GradientStringClassNames;
+      icon?: Icon;
    };
 };
 

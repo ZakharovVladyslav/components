@@ -1,0 +1,43 @@
+.wrapper {
+   width: 100%;
+
+   box-sizing: border-box;
+
+   padding: 8px;
+
+   border: 1px solid var(--light-grey);
+   border-radius: 12px;
+
+   background-color: white;
+
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   gap: 8px;
+}
+
+.text {
+   font-size: 12px;
+   font-family: 'Sora', sans-serif;
+   font-weight: 400;
+   color: black;
+
+   user-select: all;
+}
+
+.button {
+   background-color: transparent;
+
+   border: none;
+
+   padding-inline: 0;
+   padding-block: 0;
+
+   cursor: pointer;
+}
+
+.button svg {
+   width: 14px;
+
+   color: var(--light-grey);
+}
